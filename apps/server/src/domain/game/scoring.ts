@@ -12,9 +12,11 @@ const speedPoints = (rules: RoundRules, elapsedMs: number): number =>
  * so a host correction is reflected immediately.
  *
  * - `first`: the earliest correct players for a part (title / artist) take its points, up to
- *   `winnerCount` players (1 = the fastest only).
+ *   `winnerCount` players (1 = the fastest only). Each place pays `rankStep` points less than
+ *   the previous one.
  * - `everyone`: each player's earliest correct answer for a part scores.
  * Speed bonus applies per part found; the both-bonus goes to players credited with both parts.
+ * Neither bonus depends on the place.
  */
 export const scoreSong = (
   rules: RoundRules,
@@ -25,8 +27,8 @@ export const scoreSong = (
   const points = new Map<string, number>();
   const credited = new Map<string, Set<Target>>();
 
-  const credit = (answer: Answer, target: Target) => {
-    const gained = rules.pointsFor(target) + speedPoints(rules, answer.elapsedMs);
+  const credit = (answer: Answer, target: Target, rank: number) => {
+    const gained = rules.pointsForRank(target, rank) + speedPoints(rules, answer.elapsedMs);
     points.set(answer.playerId, (points.get(answer.playerId) ?? 0) + gained);
     const parts = credited.get(answer.playerId) ?? new Set<Target>();
     parts.add(target);
@@ -37,7 +39,7 @@ export const scoreSong = (
     const scorers = new Set<string>();
     for (const answer of ordered) {
       if (!answer.verdict[target] || scorers.has(answer.playerId)) continue;
-      credit(answer, target);
+      credit(answer, target, rules.scoring === 'first' ? scorers.size : 0);
       scorers.add(answer.playerId);
       if (rules.scoring === 'first' && scorers.size >= rules.winnerCount) break;
     }

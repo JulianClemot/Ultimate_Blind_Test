@@ -148,6 +148,14 @@ export const RoundEditor = ({ round, index, count, catalog, dispatch }: RoundEdi
               <RuleInput rule="winnerCount" round={round} catalog={catalog} dispatch={dispatch} />
             </Field>
           )}
+          {round.rules.scoring === 'first' && round.rules.winnerCount > 1 && (
+            <Field
+              label="Points lost per place"
+              hint="Each next winner gets this many points less (0 = same for all)"
+            >
+              <RuleInput rule="rankStep" round={round} catalog={catalog} dispatch={dispatch} />
+            </Field>
+          )}
           <Field label="Speed">
             <Select
               value={round.rules.playbackRate}

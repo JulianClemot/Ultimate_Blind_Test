@@ -9,6 +9,8 @@ export interface RoundRulesDto {
   readonly scoring: ScoringDto;
   /** With `first` scoring: how many players, the first to answer correctly, get the points. */
   readonly winnerCount: number;
+  /** With `first` scoring: points lost by each place (the 2nd gets this many less than the 1st…). */
+  readonly rankStep: number;
   readonly songCount: number;
   readonly titlePoints: number;
   readonly artistPoints: number;

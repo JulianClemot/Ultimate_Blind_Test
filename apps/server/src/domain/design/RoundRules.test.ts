@@ -17,6 +17,9 @@ describe('RoundRules', () => {
     { winnerCount: 0 },
     { winnerCount: 51 },
     { winnerCount: 1.5 },
+    { rankStep: -1 },
+    { rankStep: 101 },
+    { rankStep: 0.5 },
     { songCount: 2.5 },
     { answerTimeSec: 500 },
     { excerptSec: 0 },
@@ -31,6 +34,20 @@ describe('RoundRules', () => {
   it('keeps the number of winners the host chose', () => {
     const result = RoundRules.create({ ...ROUND_PRESETS.classic, winnerCount: 3 });
     expect(result.ok && result.value.toProps().winnerCount).toBe(3);
+  });
+
+  it('gives the points of each place', () => {
+    const result = RoundRules.create({
+      ...ROUND_PRESETS.classic,
+      winnerCount: 4,
+      titlePoints: 3,
+      rankStep: 1,
+    });
+    if (!result.ok) throw new Error(result.error.message);
+    expect([0, 1, 2, 3].map((rank) => result.value.pointsForRank('title', rank))).toEqual([
+      3, 2, 1, 0,
+    ]);
+    expect(result.value.pointsForRank('title', 9)).toBe(0);
   });
 
   it('only asks for parts that earn points', () => {

@@ -219,6 +219,29 @@ describe('roundWarnings / totalSongs', () => {
     expect(roundWarnings({ ...round, playlist: '7', playableTracks: 40 })).toEqual([]);
   });
 
+  it('warns when the descending scale leaves the last winners without points', () => {
+    const [round] = run(add('a'), { type: 'playlistChanged', key: 'a', playlist: '7' }).rounds;
+    if (!round) throw new Error('fixture');
+    const withScale = (rules: Partial<typeof round.rules>) => ({
+      ...round,
+      playableTracks: 40,
+      rules: { ...round.rules, scoring: 'first' as const, ...rules },
+    });
+    const warning = 'With this many points lost per place, the last winners get no points.';
+
+    // 3 points losing 1 per place over 3 winners: 3, 2, 1 → fine for the title, 0 for the artist.
+    expect(roundWarnings(withScale({ winnerCount: 3, rankStep: 1, titlePoints: 3 }))).toContain(
+      warning,
+    );
+    expect(
+      roundWarnings(withScale({ winnerCount: 3, rankStep: 1, titlePoints: 3, artistPoints: 3 })),
+    ).toEqual([]);
+    expect(roundWarnings(withScale({ winnerCount: 3, rankStep: 0 }))).toEqual([]);
+    expect(roundWarnings(withScale({ scoring: 'everyone', winnerCount: 3, rankStep: 5 }))).toEqual(
+      [],
+    );
+  });
+
   it('counts the songs of the whole game', () => {
     expect(totalSongs(run(add('a'), add('b', 'flash')))).toBe(20);
   });

@@ -62,15 +62,17 @@ describe('GameDesign', () => {
     expect(design.name).toBe('Friday night');
   });
 
-  it('restores designs saved before the number of winners existed, with one winner', () => {
+  it('restores designs saved before winners and rank steps existed', () => {
     const design = unwrap(newDesign());
     unwrap(design.update({ name: 'Party', rounds: [plan('42')], updatedAt: 2_000 }));
     const snapshot = structuredClone(design.toSnapshot());
     const legacyRound = { ...snapshot.rounds[0]!, rules: { ...snapshot.rounds[0]!.rules } };
     delete legacyRound.rules.winnerCount;
+    delete legacyRound.rules.rankStep;
     const legacy = { ...snapshot, rounds: [legacyRound] };
 
-    expect(GameDesign.restore(legacy).rounds[0]?.rules.winnerCount).toBe(1);
+    const restored = GameDesign.restore(legacy).rounds[0]?.rules;
+    expect([restored?.winnerCount, restored?.rankStep]).toEqual([1, 0]);
   });
 
   it('survives a snapshot round trip', () => {

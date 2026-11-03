@@ -17,6 +17,11 @@ export interface RoundRulesProps {
    * `winnerCount` correct players. 1 means the fastest only. Ignored by `everyone`.
    */
   readonly winnerCount: number;
+  /**
+   * With `first` scoring: points lost by each place, so the 2nd winner gets `rankStep`
+   * points less than the 1st, the 3rd twice as much less… (never below 0). 0 = same for all.
+   */
+  readonly rankStep: number;
   readonly songCount: number;
   /** Points for finding the title (0 = title not asked). */
   readonly titlePoints: number;
@@ -36,6 +41,7 @@ type NumericRule = Exclude<keyof RoundRulesProps, 'scoring' | 'playbackRate'>;
 
 export const RULE_LIMITS: Readonly<Record<NumericRule, { min: number; max: number }>> = {
   winnerCount: { min: 1, max: 50 },
+  rankStep: { min: 0, max: 100 },
   songCount: { min: 1, max: 50 },
   titlePoints: { min: 0, max: 100 },
   artistPoints: { min: 0, max: 100 },
@@ -49,6 +55,7 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
   classic: {
     scoring: 'first',
     winnerCount: 1,
+    rankStep: 0,
     songCount: 10,
     titlePoints: 1,
     artistPoints: 1,
@@ -61,6 +68,7 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
   everyone: {
     scoring: 'everyone',
     winnerCount: 1,
+    rankStep: 0,
     songCount: 10,
     titlePoints: 2,
     artistPoints: 2,
@@ -73,6 +81,7 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
   flash: {
     scoring: 'first',
     winnerCount: 1,
+    rankStep: 0,
     songCount: 10,
     titlePoints: 2,
     artistPoints: 2,
@@ -85,6 +94,7 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
   'fast-forward': {
     scoring: 'first',
     winnerCount: 1,
+    rankStep: 0,
     songCount: 10,
     titlePoints: 2,
     artistPoints: 2,
@@ -102,6 +112,7 @@ const invalid = (message: string) => err(gameError('INVALID_ROUND_RULES', messag
 export class RoundRules implements RoundRulesProps {
   readonly scoring: Scoring;
   readonly winnerCount: number;
+  readonly rankStep: number;
   readonly songCount: number;
   readonly titlePoints: number;
   readonly artistPoints: number;
@@ -114,6 +125,7 @@ export class RoundRules implements RoundRulesProps {
   private constructor(props: RoundRulesProps) {
     this.scoring = props.scoring;
     this.winnerCount = props.winnerCount;
+    this.rankStep = props.rankStep;
     this.songCount = props.songCount;
     this.titlePoints = props.titlePoints;
     this.artistPoints = props.artistPoints;
@@ -162,6 +174,11 @@ export class RoundRules implements RoundRulesProps {
     return this.pointsFor(target) > 0;
   }
 
+  /** Points of a part for the winner at `rank` (0 = first place), after the descending scale. */
+  pointsForRank(target: 'title' | 'artist', rank: number): number {
+    return Math.max(0, this.pointsFor(target) - rank * this.rankStep);
+  }
+
   pointsFor(target: 'title' | 'artist'): number {
     return target === 'title' ? this.titlePoints : this.artistPoints;
   }
@@ -170,6 +187,7 @@ export class RoundRules implements RoundRulesProps {
     return {
       scoring: this.scoring,
       winnerCount: this.winnerCount,
+      rankStep: this.rankStep,
       songCount: this.songCount,
       titlePoints: this.titlePoints,
       artistPoints: this.artistPoints,

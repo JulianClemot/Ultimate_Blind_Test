@@ -193,6 +193,14 @@ export const roundWarnings = (round: EditorRound): string[] => {
       `This playlist has only ${round.playableTracks} playable tracks for ${round.rules.songCount} songs.`,
     );
   }
+  const { scoring, winnerCount, rankStep, titlePoints, artistPoints } = round.rules;
+  const lastPlace = (winnerCount - 1) * rankStep;
+  if (scoring === 'first' && winnerCount > 1 && rankStep > 0) {
+    const asked = [titlePoints, artistPoints].filter((points) => points > 0);
+    if (asked.some((points) => points - lastPlace <= 0)) {
+      warnings.push('With this many points lost per place, the last winners get no points.');
+    }
+  }
   if (round.rules.titlePoints === 0 && round.rules.artistPoints === 0) {
     warnings.push('Give points for the title, the artist or both.');
   }

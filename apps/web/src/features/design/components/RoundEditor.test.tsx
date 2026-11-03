@@ -54,4 +54,35 @@ describe('<RoundEditor /> winners', () => {
     await userEvent.selectOptions(screen.getByLabelText('Who scores'), 'first');
     expect(dispatch).toHaveBeenCalledWith({ type: 'scoringChanged', key: 'r1', scoring: 'first' });
   });
+
+  it('offers the points lost per place only when several first players can win', () => {
+    for (const [rules, visible] of [
+      [{ winnerCount: 3 }, true],
+      [{ winnerCount: 1 }, false],
+      [{ scoring: 'everyone', winnerCount: 3 }, false],
+    ] as const) {
+      const { unmount } = renderWithRealtime(
+        <RoundEditor
+          round={round(rules)}
+          index={0}
+          count={1}
+          catalog={catalog}
+          dispatch={vi.fn()}
+        />,
+      );
+      expect(!!screen.queryByLabelText(/Points lost per place/)).toBe(visible);
+      unmount();
+    }
+  });
+
+  it('sets the points lost per place', async () => {
+    const dispatch = setup({ winnerCount: 3, rankStep: 1 });
+    await userEvent.type(screen.getByLabelText(/Points lost per place/), '5');
+    expect(dispatch).toHaveBeenLastCalledWith({
+      type: 'ruleChanged',
+      key: 'r1',
+      rule: 'rankStep',
+      value: 15,
+    });
+  });
 });

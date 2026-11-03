@@ -74,6 +74,78 @@ describe('scoreSong', () => {
     expect(scores(result)).toEqual({ alice: 11, bob: 6 });
   });
 
+  it('"first" with a rank step: each place pays less than the previous one', () => {
+    const podium = rules({
+      scoring: 'first',
+      winnerCount: 3,
+      rankStep: 1,
+      titlePoints: 3,
+      artistPoints: 2,
+    });
+    const result = scoreSong(podium, [
+      answer('alice', 1_000, true, true),
+      answer('bob', 2_000, true, true),
+      answer('carol', 3_000, true, false),
+      answer('dave', 4_000, true, true),
+    ]);
+    // Title: alice 3, bob 2, carol 1 (dave has no place left).
+    // Artist: alice 2, bob 1, then dave takes the 3rd place, worth 0 (carol did not find it).
+    expect(scores(result)).toEqual({ alice: 5, bob: 3, carol: 1, dave: 0 });
+  });
+
+  it('"first": points never go below zero, and a step of zero keeps them equal', () => {
+    const steep = rules({
+      scoring: 'first',
+      winnerCount: 3,
+      rankStep: 2,
+      titlePoints: 3,
+      artistPoints: 0,
+    });
+    const answers = [
+      answer('alice', 1_000, true, false),
+      answer('bob', 2_000, true, false),
+      answer('carol', 3_000, true, false),
+    ];
+    expect(scores(scoreSong(steep, answers))).toEqual({ alice: 3, bob: 1, carol: 0 });
+
+    const flat = rules({
+      scoring: 'first',
+      winnerCount: 3,
+      rankStep: 0,
+      titlePoints: 3,
+      artistPoints: 0,
+    });
+    expect(scores(scoreSong(flat, answers))).toEqual({ alice: 3, bob: 3, carol: 3 });
+  });
+
+  it('"first": the speed bonus and the both-bonus are not reduced by rank', () => {
+    const podium = rules({
+      scoring: 'first',
+      winnerCount: 2,
+      rankStep: 1,
+      titlePoints: 2,
+      artistPoints: 2,
+      bothBonus: 4,
+      speedBonus: 10,
+      answerTimeSec: 10,
+    });
+    const result = scoreSong(podium, [
+      answer('alice', 0, true, true),
+      answer('bob', 5_000, true, true),
+    ]);
+    // alice: (2+10) + (2+10) + 4. bob: (1+5) + (1+5) + 4.
+    expect(scores(result)).toEqual({ alice: 28, bob: 16 });
+  });
+
+  it('"everyone" ignores the rank step too', () => {
+    const everyone = rules({ scoring: 'everyone', rankStep: 1, artistPoints: 0 });
+    const result = scoreSong(everyone, [
+      answer('alice', 1_000, true, false),
+      answer('bob', 2_000, true, false),
+    ]);
+    expect(scores(result)).toEqual({ alice: 1, bob: 1 });
+  });
+
   it('"everyone" ignores the number of winners', () => {
     const everyone = rules({ scoring: 'everyone', winnerCount: 1, artistPoints: 0 });
     const result = scoreSong(everyone, [
