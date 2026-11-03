@@ -11,6 +11,7 @@ import { GameOverview } from '@/shared/ui/GameOverview';
 import { Scoreboard } from '@/shared/ui/Scoreboard';
 
 import { AnswerList } from './components/AnswerList';
+import { JoinQrCode } from './components/JoinQrCode';
 import { PlayerList } from './components/PlayerList';
 import { ScoreboardPanel } from './components/ScoreboardPanel';
 import { SongPanel } from './components/SongPanel';
@@ -98,9 +99,12 @@ const HostGame = ({ session }: { session: HostSession }) => {
       )}
 
       {!song && (
-        <Card>
-          <CardTitle>Players ({game.players.length})</CardTitle>
-          <PlayerList players={game.players} />
+        <Card className="flex flex-col gap-6 sm:flex-row sm:items-start">
+          <div className="flex-1">
+            <CardTitle>Players ({game.players.length})</CardTitle>
+            <PlayerList players={game.players} />
+          </div>
+          <JoinQrCode code={game.code} />
         </Card>
       )}
 

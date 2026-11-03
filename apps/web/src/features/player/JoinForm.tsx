@@ -7,8 +7,14 @@ import { Input } from '@/shared/ui/input';
 
 import { useJoinGame } from './useJoinGame';
 
-export const JoinForm = ({ onJoined }: { onJoined: (session: PlayerSessionDto) => void }) => {
-  const [code, setCode] = useState('');
+export const JoinForm = ({
+  onJoined,
+  initialCode = '',
+}: {
+  onJoined: (session: PlayerSessionDto) => void;
+  initialCode?: string;
+}) => {
+  const [code, setCode] = useState(initialCode);
   const [playerName, setPlayerName] = useState('');
   const join = useJoinGame();
 

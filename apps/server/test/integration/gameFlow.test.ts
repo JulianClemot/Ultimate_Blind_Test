@@ -151,6 +151,13 @@ describe('blind test (HTTP + Socket.IO)', () => {
     expect(catalog.limits.songCount).toEqual({ min: 1, max: 50 });
   });
 
+  it('lists the LAN addresses so the lobby QR code can use a reachable IP', async () => {
+    const { status, body } = await api<{ addresses: string[] }>('GET', '/api/network');
+    expect(status).toBe(200);
+    expect(body.addresses).not.toContain('127.0.0.1');
+    body.addresses.forEach((address) => expect(address).toMatch(/^\d+\.\d+\.\d+\.\d+$/));
+  });
+
   describe('game designs', () => {
     it('creates, edits, reads and deletes a design with its edit token', async () => {
       const created = await api<CreateGameDesignResponseDto>('POST', '/api/designs', {

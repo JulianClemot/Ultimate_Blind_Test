@@ -31,6 +31,12 @@ describe('<JoinForm />', () => {
     });
   });
 
+  it('prefills the game code scanned from a QR code', () => {
+    renderWithRealtime(<JoinForm onJoined={vi.fn()} initialCode="ABCDEF" />);
+
+    expect(screen.getByLabelText('Game code')).toHaveValue('ABCDEF');
+  });
+
   it('displays server errors', async () => {
     const joinGame = vi
       .fn()

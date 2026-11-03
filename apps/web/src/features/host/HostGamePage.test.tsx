@@ -34,6 +34,20 @@ describe('<HostGamePage />', () => {
     expect(overview).toHaveTextContent('Only the first 4 s of each song are played');
   });
 
+  it('shows a QR code in the lobby that targets the LAN address, not localhost', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(Response.json({ addresses: ['192.168.1.42'] })),
+    );
+    renderPage(snapshot({ code: 'ABCDEF' }));
+
+    const qr = await screen.findByRole('img', { name: /QR code to join the game/ });
+    expect(qr.getAttribute('aria-label')).toContain(`192.168.1.42`);
+    expect(qr.getAttribute('aria-label')).toContain('?code=ABCDEF');
+    expect(qr.querySelector('svg')).not.toBeNull();
+    vi.unstubAllGlobals();
+  });
+
   it('hides the overview once a song is playing', async () => {
     renderPage(snapshot({ status: 'playing', currentSong: hostSong() }));
 

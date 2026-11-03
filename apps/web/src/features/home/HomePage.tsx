@@ -1,5 +1,5 @@
 import { useState, type SubmitEvent } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 
 import { useCreateDesign } from '@/shared/api/designsApi';
 import { useDesignStore } from '@/shared/session/designStore';
@@ -47,6 +47,7 @@ const CreateDesignForm = () => {
 
 export const HomePage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   return (
     <PageLayout>
@@ -61,7 +62,10 @@ export const HomePage = () => {
         </Card>
         <Card>
           <CardTitle>Join a game</CardTitle>
-          <JoinForm onJoined={(session) => void navigate(`/play/${session.gameId}`)} />
+          <JoinForm
+            initialCode={searchParams.get('code') ?? ''}
+            onJoined={(session) => void navigate(`/play/${session.gameId}`)}
+          />
         </Card>
       </div>
     </PageLayout>

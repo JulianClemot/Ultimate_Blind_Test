@@ -22,6 +22,7 @@ import type { AppConfig } from './config/env';
 import { registerDesignRoutes } from './infrastructure/primary/http/designRoutes';
 import { registerGameRoutes } from './infrastructure/primary/http/gameRoutes';
 import { registerHealthRoutes } from './infrastructure/primary/http/healthRoutes';
+import { registerNetworkRoutes } from './infrastructure/primary/http/networkRoutes';
 import { registerSocketHandlers } from './infrastructure/primary/socket/registerSocketHandlers';
 import type { GameServer } from './infrastructure/realtime/types';
 import { SocketIoGameEventPublisher } from './infrastructure/secondary/events/SocketIoGameEventPublisher';
@@ -81,6 +82,7 @@ export const createAppServer = async (config: AppConfig): Promise<AppServer> => 
   };
 
   registerHealthRoutes(http);
+  registerNetworkRoutes(http);
   registerDesignRoutes(http, useCases);
   registerGameRoutes(http, useCases);
   registerSocketHandlers(io, useCases, http.log);
