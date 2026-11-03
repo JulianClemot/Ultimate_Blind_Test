@@ -46,7 +46,7 @@ const Found = ({ label, found }: { label: string; found: boolean }) => (
   <span
     className={cn(
       'rounded-full px-3 py-1 text-sm font-medium',
-      found ? 'bg-green-600/15 text-green-700 dark:text-green-400' : 'bg-secondary',
+      found ? 'bg-success/15 text-success' : 'bg-secondary',
     )}
   >
     {label} {found ? '✓' : '?'}

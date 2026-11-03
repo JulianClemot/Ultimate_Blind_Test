@@ -19,12 +19,13 @@ export const Scoreboard = ({ scores, playerId, limit }: ScoreboardProps) => {
   }));
   const shown = limit ? ranked.slice(0, limit) : ranked;
   return (
-    <ol className="flex flex-col divide-y" aria-label="Scoreboard">
+    <ol className="flex flex-col divide-y divide-ink/20" aria-label="Scoreboard">
       {shown.map((score) => (
         <li
           key={score.playerId}
           className={cn(
             'flex items-baseline gap-3 py-2',
+            score.rank === 1 && 'text-primary',
             score.playerId === playerId && 'font-semibold',
           )}
         >

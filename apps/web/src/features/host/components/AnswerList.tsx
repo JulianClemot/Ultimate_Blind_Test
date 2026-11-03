@@ -27,9 +27,7 @@ const VerdictToggle = ({
     onClick={onToggle}
     className={cn(
       'rounded-full px-2 py-0.5 text-xs font-medium',
-      correct
-        ? 'bg-green-600/15 text-green-700 dark:text-green-400'
-        : 'bg-secondary text-muted-foreground',
+      correct ? 'bg-success/15 text-success' : 'bg-secondary text-muted-foreground',
       onToggle && 'hover:ring-2 hover:ring-ring',
     )}
   >

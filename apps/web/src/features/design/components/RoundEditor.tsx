@@ -179,7 +179,7 @@ export const RoundEditor = ({ round, index, count, catalog, dispatch }: RoundEdi
       </details>
 
       {warnings.length > 0 && (
-        <ul className="list-disc pl-5 text-sm text-amber-600 dark:text-amber-400">
+        <ul className="list-disc pl-5 text-sm text-warning">
           {warnings.map((warning) => (
             <li key={warning}>{warning}</li>
           ))}
