@@ -13,6 +13,18 @@ describe('describeRules', () => {
     ]);
   });
 
+  it('says how many players win when several can', () => {
+    const lines = describeRules({ ...catalog.presets.classic, winnerCount: 3 });
+    expect(lines).toContain('The first 3 players to answer correctly score');
+    expect(lines.join(' ')).not.toMatch(/fastest/);
+  });
+
+  it('ignores the number of winners when everyone scores', () => {
+    const lines = describeRules({ ...catalog.presets.everyone, winnerCount: 3 });
+    expect(lines).toContain('Everyone who answers correctly scores');
+    expect(lines.join(' ')).not.toMatch(/first 3/);
+  });
+
   it('mentions bonuses for rounds where everyone scores', () => {
     expect(describeRules({ ...catalog.presets.everyone, bothBonus: 1 })).toEqual([
       '10 songs, 30 s to answer each',

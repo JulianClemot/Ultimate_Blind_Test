@@ -12,6 +12,7 @@ export const roundTypeSchema = z.enum(['classic', 'everyone', 'flash', 'fast-for
 
 export const roundRulesSchema = z.object({
   scoring: z.enum(['first', 'everyone']),
+  winnerCount: z.number(),
   songCount: z.number(),
   titlePoints: z.number(),
   artistPoints: z.number(),

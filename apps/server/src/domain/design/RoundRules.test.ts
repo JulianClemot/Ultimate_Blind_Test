@@ -14,6 +14,9 @@ describe('RoundRules', () => {
 
   it.each([
     { songCount: 0 },
+    { winnerCount: 0 },
+    { winnerCount: 51 },
+    { winnerCount: 1.5 },
     { songCount: 2.5 },
     { answerTimeSec: 500 },
     { excerptSec: 0 },
@@ -23,6 +26,11 @@ describe('RoundRules', () => {
   ])('rejects %o', (override) => {
     const result = RoundRules.create({ ...ROUND_PRESETS.classic, ...override });
     expect(!result.ok && result.error.code).toBe('INVALID_ROUND_RULES');
+  });
+
+  it('keeps the number of winners the host chose', () => {
+    const result = RoundRules.create({ ...ROUND_PRESETS.classic, winnerCount: 3 });
+    expect(result.ok && result.value.toProps().winnerCount).toBe(3);
   });
 
   it('only asks for parts that earn points', () => {

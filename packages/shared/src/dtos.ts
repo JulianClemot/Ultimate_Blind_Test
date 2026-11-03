@@ -7,6 +7,8 @@ export type ScoringDto = 'first' | 'everyone';
 
 export interface RoundRulesDto {
   readonly scoring: ScoringDto;
+  /** With `first` scoring: how many players, the first to answer correctly, get the points. */
+  readonly winnerCount: number;
   readonly songCount: number;
   readonly titlePoints: number;
   readonly artistPoints: number;

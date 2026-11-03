@@ -23,11 +23,13 @@ export const describeRules = (rules: RoundRulesDto): string[] => {
     lines.push(`Find the artist (${points(rules.artistPoints)})`);
   }
 
-  lines.push(
-    rules.scoring === 'first'
-      ? 'Only the fastest correct answer scores'
-      : 'Everyone who answers correctly scores',
-  );
+  if (rules.scoring === 'everyone') {
+    lines.push('Everyone who answers correctly scores');
+  } else if (rules.winnerCount === 1) {
+    lines.push('Only the fastest correct answer scores');
+  } else {
+    lines.push(`The first ${rules.winnerCount} players to answer correctly score`);
+  }
   if (asksTitle && asksArtist && rules.bothBonus > 0) {
     lines.push(`Bonus: +${points(rules.bothBonus)} for finding both`);
   }

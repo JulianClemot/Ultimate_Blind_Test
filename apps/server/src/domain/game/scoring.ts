@@ -11,7 +11,8 @@ const speedPoints = (rules: RoundRules, elapsedMs: number): number =>
  * Points earned by each player on one song. Pure and recomputed from the answers,
  * so a host correction is reflected immediately.
  *
- * - `first`: the earliest correct answer for a part (title / artist) takes its points.
+ * - `first`: the earliest correct players for a part (title / artist) take its points, up to
+ *   `winnerCount` players (1 = the fastest only).
  * - `everyone`: each player's earliest correct answer for a part scores.
  * Speed bonus applies per part found; the both-bonus goes to players credited with both parts.
  */
@@ -38,7 +39,7 @@ export const scoreSong = (
       if (!answer.verdict[target] || scorers.has(answer.playerId)) continue;
       credit(answer, target);
       scorers.add(answer.playerId);
-      if (rules.scoring === 'first') break;
+      if (rules.scoring === 'first' && scorers.size >= rules.winnerCount) break;
     }
   }
 

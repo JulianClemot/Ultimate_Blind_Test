@@ -29,6 +29,24 @@ const NUMERIC_RULES: readonly { rule: NumericRuleDto; label: string; hint?: stri
   { rule: 'speedBonus', label: 'Max speed bonus', hint: 'Decreases until time is up' },
 ];
 
+const RuleInput = ({
+  rule,
+  round,
+  catalog,
+  dispatch,
+}: Pick<RoundEditorProps, 'round' | 'catalog' | 'dispatch'> & { rule: NumericRuleDto }) => (
+  <Input
+    type="number"
+    inputMode="numeric"
+    min={catalog.limits[rule].min}
+    max={catalog.limits[rule].max}
+    value={round.rules[rule]}
+    onChange={(e) =>
+      dispatch({ type: 'ruleChanged', key: round.key, rule, value: e.target.valueAsNumber || 0 })
+    }
+  />
+);
+
 export const RoundEditor = ({ round, index, count, catalog, dispatch }: RoundEditorProps) => {
   const key = round.key;
   const warnings = roundWarnings(round);
@@ -118,10 +136,18 @@ export const RoundEditor = ({ round, index, count, catalog, dispatch }: RoundEdi
                 })
               }
             >
-              <option value="first">Fastest only</option>
+              <option value="first">First players only</option>
               <option value="everyone">Everyone correct</option>
             </Select>
           </Field>
+          {round.rules.scoring === 'first' && (
+            <Field
+              label="Number of winners"
+              hint="The first players to answer correctly get the points"
+            >
+              <RuleInput rule="winnerCount" round={round} catalog={catalog} dispatch={dispatch} />
+            </Field>
+          )}
           <Field label="Speed">
             <Select
               value={round.rules.playbackRate}
@@ -138,16 +164,7 @@ export const RoundEditor = ({ round, index, count, catalog, dispatch }: RoundEdi
           </Field>
           {NUMERIC_RULES.map(({ rule, label, hint }) => (
             <Field key={rule} label={label} {...(hint ? { hint } : {})}>
-              <Input
-                type="number"
-                inputMode="numeric"
-                min={catalog.limits[rule].min}
-                max={catalog.limits[rule].max}
-                value={round.rules[rule]}
-                onChange={(e) =>
-                  dispatch({ type: 'ruleChanged', key, rule, value: e.target.valueAsNumber || 0 })
-                }
-              />
+              <RuleInput rule={rule} round={round} catalog={catalog} dispatch={dispatch} />
             </Field>
           ))}
         </div>

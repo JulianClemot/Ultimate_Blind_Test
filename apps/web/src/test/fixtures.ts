@@ -9,6 +9,7 @@ import type {
 
 const rules = (overrides: Partial<RoundRulesDto> = {}): RoundRulesDto => ({
   scoring: 'first',
+  winnerCount: 1,
   songCount: 10,
   titlePoints: 1,
   artistPoints: 1,
@@ -29,6 +30,7 @@ export const catalog: RoundCatalogDto = {
   },
   limits: {
     songCount: { min: 1, max: 50 },
+    winnerCount: { min: 1, max: 50 },
     titlePoints: { min: 0, max: 100 },
     artistPoints: { min: 0, max: 100 },
     bothBonus: { min: 0, max: 100 },

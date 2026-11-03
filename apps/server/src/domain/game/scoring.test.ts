@@ -35,6 +35,54 @@ describe('scoreSong', () => {
     expect(scores(result)).toEqual({ alice: 1, carol: 2 });
   });
 
+  it('"first" with several winners: the first N correct players each take the points', () => {
+    const topTwo = rules({ scoring: 'first', winnerCount: 2, titlePoints: 3, artistPoints: 1 });
+    const result = scoreSong(topTwo, [
+      answer('dave', 4_000, true, true),
+      answer('bob', 3_000, true, false),
+      answer('alice', 1_000, true, true),
+      answer('carol', 2_000, false, true),
+    ]);
+    // Title: alice then bob. Artist: alice then carol. Dave is too late for both.
+    expect(scores(result)).toEqual({ alice: 4, bob: 3, carol: 1 });
+  });
+
+  it('"first": winners are counted per player, and wrong or repeated answers do not use a place', () => {
+    const topTwo = rules({ scoring: 'first', winnerCount: 2, artistPoints: 0 });
+    const result = scoreSong(topTwo, [
+      answer('alice', 1_000, true, false),
+      answer('alice', 1_500, true, false),
+      answer('bob', 2_000, false, false),
+      answer('carol', 3_000, true, false),
+      answer('dave', 4_000, true, false),
+    ]);
+    expect(scores(result)).toEqual({ alice: 1, carol: 1 });
+  });
+
+  it('"first": winners get the speed bonus of their own answer', () => {
+    const topTwo = rules({
+      scoring: 'first',
+      winnerCount: 2,
+      speedBonus: 10,
+      answerTimeSec: 10,
+      artistPoints: 0,
+    });
+    const result = scoreSong(topTwo, [
+      answer('alice', 0, true, false),
+      answer('bob', 5_000, true, false),
+    ]);
+    expect(scores(result)).toEqual({ alice: 11, bob: 6 });
+  });
+
+  it('"everyone" ignores the number of winners', () => {
+    const everyone = rules({ scoring: 'everyone', winnerCount: 1, artistPoints: 0 });
+    const result = scoreSong(everyone, [
+      answer('alice', 1_000, true, false),
+      answer('bob', 2_000, true, false),
+    ]);
+    expect(scores(result)).toEqual({ alice: 1, bob: 1 });
+  });
+
   it('"first": the both-bonus needs the same player to win both parts', () => {
     const first = rules({ scoring: 'first', bothBonus: 5 });
     expect(scores(scoreSong(first, [answer('alice', 1_000, true, true)]))).toEqual({ alice: 7 });
