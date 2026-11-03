@@ -1,0 +1,118 @@
+import type { RoundRules } from '../design/RoundRules';
+import { matchAnswer, type Verdict } from '../music/answerMatching';
+import type { Track } from '../music/Track';
+import { err, ok, type Result } from '../shared/Result';
+import type { Timestamp } from '../shared/Timestamp';
+import type { Answer } from './Answer';
+import { gameError, type GameError } from './GameErrors';
+import { scoreSong } from './scoring';
+
+export interface SubmitAnswerCommand {
+  readonly answerId: string;
+  readonly playerId: string;
+  readonly text: string;
+  readonly receivedAt: Timestamp;
+  readonly clientSentAt: Timestamp;
+}
+
+/** One track played within a round. Players may answer several times until they find it. */
+export class Song {
+  static readonly MAX_ANSWER_LENGTH = 200;
+  static readonly MAX_ATTEMPTS = 10;
+
+  private readonly answers: Answer[] = [];
+  private revealTime: Timestamp | undefined;
+
+  constructor(
+    readonly id: string,
+    readonly roundNumber: number,
+    /** Position within its round, from 1. */
+    readonly number: number,
+    readonly startedAt: Timestamp,
+    readonly track: Track,
+    readonly rules: RoundRules,
+  ) {}
+
+  get closesAt(): Timestamp {
+    return this.startedAt + this.rules.answerTimeMs;
+  }
+
+  get isRevealed(): boolean {
+    return this.revealTime !== undefined;
+  }
+
+  get revealedAt(): Timestamp | undefined {
+    return this.revealTime;
+  }
+
+  submit(command: SubmitAnswerCommand): Result<Answer, GameError> {
+    if (this.isRevealed || command.receivedAt > this.closesAt) {
+      return err(gameError('SONG_CLOSED', 'Time is up for this song'));
+    }
+    const text = command.text.trim();
+    if (text.length === 0 || text.length > Song.MAX_ANSWER_LENGTH) {
+      return err(
+        gameError(
+          'INVALID_ANSWER',
+          `Answer must contain 1 to ${Song.MAX_ANSWER_LENGTH} characters`,
+        ),
+      );
+    }
+    const previous = this.answersOf(command.playerId);
+    if (previous.length >= Song.MAX_ATTEMPTS) {
+      return err(gameError('TOO_MANY_ATTEMPTS', `At most ${Song.MAX_ATTEMPTS} answers per song`));
+    }
+    if (this.hasFoundEverything(command.playerId)) {
+      return err(gameError('ALREADY_FOUND', 'You already found everything for this song'));
+    }
+    const answer: Answer = {
+      id: command.answerId,
+      songId: this.id,
+      playerId: command.playerId,
+      text,
+      receivedAt: command.receivedAt,
+      elapsedMs: Math.max(0, command.receivedAt - this.startedAt),
+      clientSentAt: command.clientSentAt,
+      verdict: matchAnswer(text, this.track),
+      judgedByHost: false,
+    };
+    this.answers.push(answer);
+    return ok(answer);
+  }
+
+  /** Host correction of the automatic verdict; allowed until the next song starts. */
+  judge(answerId: string, verdict: Verdict): Result<Answer, GameError> {
+    const index = this.answers.findIndex((a) => a.id === answerId);
+    const answer = this.answers[index];
+    if (!answer) return err(gameError('UNKNOWN_ANSWER', 'No such answer for the current song'));
+    const judged: Answer = { ...answer, verdict, judgedByHost: true };
+    this.answers[index] = judged;
+    return ok(judged);
+  }
+
+  reveal(at: Timestamp): Result<Song, GameError> {
+    if (this.isRevealed) return err(gameError('SONG_ALREADY_REVEALED', 'Song already revealed'));
+    this.revealTime = at;
+    return ok(this);
+  }
+
+  /** Answers ranked by server reception time, fastest first. */
+  answersByArrival(): readonly Answer[] {
+    return [...this.answers].sort((a, b) => a.receivedAt - b.receivedAt);
+  }
+
+  answersOf(playerId: string): readonly Answer[] {
+    return this.answersByArrival().filter((a) => a.playerId === playerId);
+  }
+
+  points(): ReadonlyMap<string, number> {
+    return scoreSong(this.rules, this.answers);
+  }
+
+  private hasFoundEverything(playerId: string): boolean {
+    const found = this.answersOf(playerId);
+    return (['title', 'artist'] as const)
+      .filter((target) => this.rules.asks(target))
+      .every((target) => found.some((a) => a.verdict[target]));
+  }
+}

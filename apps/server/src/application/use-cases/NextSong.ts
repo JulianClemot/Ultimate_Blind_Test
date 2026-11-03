@@ -1,0 +1,68 @@
+import { err, ok, type Result } from '../../domain';
+import { appError, type UseCaseError } from '../errors';
+import type { HostCommand, NextSongResult, NextSongUseCase } from '../ports/in';
+import type {
+  Clock,
+  GameEventPublisher,
+  GameRepository,
+  IdGenerator,
+  MusicCatalog,
+  RandomGenerator,
+} from '../ports/out';
+import { loadHostedGame } from './access';
+
+/**
+ * Plays the next song: a random, not yet played track of the upcoming round's playlist.
+ * When every round is complete, finishes the game instead.
+ */
+export class NextSong implements NextSongUseCase {
+  constructor(
+    private readonly games: GameRepository,
+    private readonly ids: IdGenerator,
+    private readonly clock: Clock,
+    private readonly events: GameEventPublisher,
+    private readonly catalog: MusicCatalog,
+    private readonly random: RandomGenerator,
+  ) {}
+
+  async execute(command: HostCommand): Promise<Result<NextSongResult, UseCaseError>> {
+    const loaded = await loadHostedGame(this.games, command);
+    if (!loaded.ok) return loaded;
+    const game = loaded.value;
+
+    // Checked before calling the catalog, so a misclick does not cost a Deezer request.
+    const movable = game.canMoveOn();
+    if (!movable.ok) return movable;
+
+    const round = game.upcomingRound;
+    if (!round) {
+      const finished = game.finish();
+      if (!finished.ok) return finished;
+      await this.games.save(game);
+      this.events.gameFinished(game);
+      return ok({ kind: 'finished', game });
+    }
+    const playlist = await this.catalog.playlist(round.plan.playlist);
+    if (!playlist.ok) return playlist;
+
+    const candidates = playlist.value.tracks.filter((track) => !game.hasPlayed(track.id));
+    if (candidates.length === 0) {
+      return err(
+        appError(
+          'PLAYLIST_EXHAUSTED',
+          `No unplayed track with a preview left in the playlist of round ${round.number}`,
+        ),
+      );
+    }
+    const track = candidates[this.random.nextInt(candidates.length)];
+    if (!track) throw new Error('RandomGenerator returned an out-of-range index');
+
+    // The song starts once the track is known, so the catalog lookup is not counted
+    // in the players' answer times.
+    const song = game.startSong({ songId: this.ids.next(), startedAt: this.clock.now(), track });
+    if (!song.ok) return song;
+    await this.games.save(game);
+    this.events.songStarted(game, song.value);
+    return ok({ kind: 'song', game, song: song.value });
+  }
+}

@@ -1,0 +1,8 @@
+export type * from './Clock';
+export type * from './GameCodeGenerator';
+export type * from './GameDesignRepository';
+export type * from './GameEventPublisher';
+export type * from './GameRepository';
+export type * from './IdGenerator';
+export type * from './MusicCatalog';
+export type * from './RandomGenerator';
