@@ -67,8 +67,9 @@ These rules are enforced by `pnpm depcruise` (`.dependency-cruiser.cjs`) in CI.
   (`Scheduler` port, 2 s) the `AutoRevealSong` use case, which reveals that exact song unless the
   host already did. `everyoneAnswered` in the snapshot/session DTOs covers refreshes in the window.
   Players who never connect still count, so the host's "Reveal now" and the timer remain the fallbacks.
-- **Secrecy**: players never get the preview URL; title and artist leave the server only at the
-  reveal (the host does not know the answer either). Players only see scores of revealed songs.
+- **Secrecy**: players never get the preview URL; title and artist reach them only at the reveal.
+  Hosts receive them with the song (`HostSongDto`) so they can give oral clues; the UI hides them
+  until hovered/focused. Players only see scores of revealed songs.
 - **The server clock is authoritative.** `SubmitAnswer` reads `Clock.now()` _first_, before any I/O.
   `SystemClock` uses `performance.timeOrigin + performance.now()`: monotonic and sub-millisecond,
   immune to NTP jumps. `elapsedMs = receivedAt − round.startedAt`. The client's `clientSentAt` is

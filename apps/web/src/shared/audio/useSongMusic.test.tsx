@@ -22,6 +22,8 @@ const song = (overrides: Partial<HostSongDto> = {}): HostSongDto => ({
   previewUrl: 'https://cdn.test/1.mp3',
   excerptSec: 30,
   playbackRate: 1,
+  title: 'One More Time',
+  artist: 'Daft Punk',
   ...overrides,
 });
 

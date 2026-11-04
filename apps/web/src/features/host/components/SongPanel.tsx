@@ -1,5 +1,5 @@
 import type { HostSongDto, RevealDto } from '@ubt/shared';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ROUND_TYPE_INFO } from '@/shared/lib/roundTypes';
 import { formatCountdown } from '@/shared/lib/time';
@@ -19,6 +19,30 @@ interface SongPanelProps {
   readonly onReplay: () => void;
   readonly onStop: () => void;
 }
+
+/** The answer, shown only while hovered or focused so the host can give oral clues. */
+const HostPeek = ({ song }: { song: HostSongDto }) => {
+  const [visible, setVisible] = useState(false);
+  return (
+    <button
+      type="button"
+      aria-label="Peek at the answer (host only)"
+      className="rounded-lg border border-dashed p-3 text-left text-sm"
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+      onFocus={() => setVisible(true)}
+      onBlur={() => setVisible(false)}
+    >
+      {visible ? (
+        <span className="font-medium">
+          {song.artist} – {song.title}
+        </span>
+      ) : (
+        <span className="text-muted-foreground">👀 Hover to peek at the answer (only you)</span>
+      )}
+    </button>
+  );
+};
 
 /** Current song, its countdown and the host controls. Reveals automatically when time is up or everyone answered. */
 export const SongPanel = ({
@@ -70,6 +94,8 @@ export const SongPanel = ({
           Wait for everyone to join, then play the first song.
         </p>
       )}
+
+      {open && <HostPeek song={song} />}
 
       {open && everyoneAnswered && (
         <p role="status" className="rounded-lg bg-secondary p-4 text-center font-semibold">

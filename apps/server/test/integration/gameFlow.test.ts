@@ -341,7 +341,8 @@ describe('blind test (HTTP + Socket.IO)', () => {
     const playerSong = await songForPlayer;
     expect(playerSong).not.toHaveProperty('previewUrl');
     expect(playerSong).toMatchObject({ roundName: 'Playlist 42' });
-    expect(JSON.stringify([next.data, playerSong])).not.toMatch(/Daft Punk|One More Time/);
+    expect(next.data.song).toMatchObject({ title: 'One More Time', artist: 'Daft Punk' });
+    expect(JSON.stringify(playerSong)).not.toMatch(/Daft Punk|One More Time/);
 
     // The player answers: checked automatically, timestamped by the server.
     const received = nextEvent(host, 'answer:received');

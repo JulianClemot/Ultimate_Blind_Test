@@ -105,14 +105,17 @@ export interface SongDto {
 }
 
 /**
- * What the host screen gets: the song plus the audio to play. Title and artist
- * are only sent at the reveal, so nobody (host included) knows the answer before.
+ * What the host screen gets: the song, the audio to play and the answer (the host may
+ * peek at it to give clues). Players only get title and artist at the reveal.
  */
 export interface HostSongDto extends SongDto {
   /** 30 s Deezer preview. Signed URL that expires after a few minutes. */
   readonly previewUrl: string;
   readonly excerptSec: number;
   readonly playbackRate: number;
+  /** Only for the host, to give oral clues. Never sent to players before the reveal. */
+  readonly title: string;
+  readonly artist: string;
 }
 
 export interface RevealDto {

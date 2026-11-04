@@ -80,6 +80,8 @@ export const toHostSongDto = (game: Game, song: Song): HostSongDto => ({
   previewUrl: song.track.previewUrl,
   excerptSec: song.rules.excerptSec,
   playbackRate: song.rules.playbackRate,
+  title: song.track.title,
+  artist: song.track.artist,
 });
 
 export const toRevealDto = (game: Game, song: Song): RevealDto => ({

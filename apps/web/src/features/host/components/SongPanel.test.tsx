@@ -105,6 +105,26 @@ describe('<SongPanel />', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Everyone answered');
   });
 
+  it('lets the host peek at the answer by hovering, without showing it otherwise', async () => {
+    render(
+      <SongPanel
+        song={hostSong({ startedAt: Date.now(), answerTimeSec: 30 })}
+        reveal={null}
+        roundCount={2}
+        hasNextSong
+        everyoneAnswered={false}
+        pending={false}
+        {...handlers()}
+      />,
+    );
+    expect(screen.queryByText(/Daft Punk/)).not.toBeInTheDocument();
+    const peek = screen.getByRole('button', { name: /peek at the answer/i });
+    await userEvent.hover(peek);
+    expect(screen.getByText('Daft Punk – One More Time')).toBeInTheDocument();
+    await userEvent.unhover(peek);
+    expect(screen.queryByText(/Daft Punk/)).not.toBeInTheDocument();
+  });
+
   it('shows the answer after the reveal and the final step on the last song', () => {
     render(
       <SongPanel
