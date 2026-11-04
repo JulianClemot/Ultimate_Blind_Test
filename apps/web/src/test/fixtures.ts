@@ -1,5 +1,6 @@
 import type {
   AnswerDto,
+  GameRecapDto,
   GameSnapshotDto,
   HostSongDto,
   PlayerSessionDto,
@@ -103,6 +104,7 @@ export const snapshot = (overrides: Partial<GameSnapshotDto> = {}): GameSnapshot
   answers: [],
   scoreboard: [{ playerId: 'p1', playerName: 'Alice', points: 0 }],
   hasNextSong: true,
+  recap: null,
   ...overrides,
 });
 
@@ -117,5 +119,63 @@ export const playerSession = (overrides: Partial<PlayerSessionDto> = {}): Player
   reveal: null,
   myAnswers: [],
   scoreboard: [],
+  recap: null,
+  ...overrides,
+});
+
+/** Alice wins ahead of Bob; Alice is the sniper; two songs were played. */
+export const gameRecap = (overrides: Partial<GameRecapDto> = {}): GameRecapDto => ({
+  gameName: 'Friday night',
+  standings: [
+    { rank: 1, playerId: 'p1', playerName: 'Alice', points: 5 },
+    { rank: 2, playerId: 'p2', playerName: 'Bob', points: 3 },
+    { rank: 2, playerId: 'p3', playerName: 'Chloé', points: 3 },
+    { rank: 4, playerId: 'p4', playerName: 'Dan', points: 0 },
+  ],
+  superlatives: [
+    { kind: 'fastest-finger', playerId: 'p1', playerName: 'Alice', value: 2_345 },
+    { kind: 'sniper', playerId: 'p1', playerName: 'Alice', value: 2 },
+    { kind: 'stubborn', playerId: 'p2', playerName: 'Bob', value: 4 },
+    { kind: 'comeback-kid', playerId: 'p3', playerName: 'Chloé', value: 2 },
+  ],
+  songs: [
+    {
+      songId: 's1',
+      roundNumber: 1,
+      roundName: 'Warm-up',
+      number: 1,
+      title: 'One More Time',
+      artist: 'Daft Punk',
+      results: [
+        {
+          playerId: 'p1',
+          playerName: 'Alice',
+          points: 2,
+          foundTitle: true,
+          foundArtist: true,
+          foundAtMs: 1_500,
+          wrongAttempts: 0,
+        },
+        {
+          playerId: 'p2',
+          playerName: 'Bob',
+          points: 1,
+          foundTitle: true,
+          foundArtist: false,
+          foundAtMs: 4_200,
+          wrongAttempts: 2,
+        },
+        {
+          playerId: 'p4',
+          playerName: 'Dan',
+          points: 0,
+          foundTitle: false,
+          foundArtist: false,
+          foundAtMs: null,
+          wrongAttempts: 0,
+        },
+      ],
+    },
+  ],
   ...overrides,
 });

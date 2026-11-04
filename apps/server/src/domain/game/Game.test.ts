@@ -222,6 +222,23 @@ describe('Game', () => {
       });
     });
 
+    it('counts the points of the last song in the final scores', () => {
+      const songs = [unwrap(startSong())];
+      unwrap(game.revealSong(T0 + 1));
+      songs.push(unwrap(startSong()));
+      unwrap(game.revealSong(T0 + 1));
+      const last = unwrap(startSong());
+      unwrap(answer('p2', T0 + 5, last.track.title));
+      unwrap(game.revealSong(T0 + 6));
+
+      unwrap(game.finish());
+
+      const final = game.scoreboard({ revealedOnly: true });
+      expect(final[0]).toMatchObject({ player: { id: 'p2' } });
+      expect(final[0]?.points).toBeGreaterThan(0);
+      expect(final).toEqual(game.scoreboard({ revealedOnly: false }));
+    });
+
     it('shows players only the scores of revealed songs', () => {
       const song = unwrap(startSong());
       unwrap(answer('p2', T0 + 1, song.track.title));

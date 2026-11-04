@@ -7,6 +7,7 @@ import { Button } from '@/shared/ui/button';
 import { Card, CardTitle } from '@/shared/ui/card';
 import { ErrorMessage } from '@/shared/ui/ErrorMessage';
 import { PageLayout } from '@/shared/ui/PageLayout';
+import { Recap } from '@/shared/ui/Recap';
 import { GameOverview } from '@/shared/ui/GameOverview';
 import { Scoreboard } from '@/shared/ui/Scoreboard';
 
@@ -26,6 +27,8 @@ const HostGame = ({ session }: { session: HostSession }) => {
   if (!game) return <p className="text-muted-foreground">Connecting to the game…</p>;
 
   if (game.status === 'finished') {
+    // The recap follows `game:finished` by a few ms; the plain scores fill the gap.
+    if (game.recap) return <Recap recap={game.recap} />;
     return (
       <Card>
         <CardTitle>{game.name} — final scores</CardTitle>

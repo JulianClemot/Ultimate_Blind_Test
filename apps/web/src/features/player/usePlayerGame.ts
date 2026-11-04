@@ -30,6 +30,7 @@ export const usePlayerGame = (session: PlayerSession) => {
     dispatch({ type: 'scoreboardUpdated', scoreboard }),
   );
   useSocketEvent('game:finished', (scoreboard) => dispatch({ type: 'gameFinished', scoreboard }));
+  useSocketEvent('game:recap', (recap) => dispatch({ type: 'recapReceived', recap }));
 
   const submitAnswer = useMutation({
     mutationFn: (text: string) => gateway.submitAnswer({ text, clientSentAt: Date.now() }),

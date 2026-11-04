@@ -1,6 +1,7 @@
 import type {
   AnswerDto,
   ErrorDto,
+  GameRecapDto,
   GameSnapshotDto,
   HostSongDto,
   NextSongResponseDto,
@@ -52,4 +53,6 @@ export interface ServerToClientEvents {
   'scoreboard:updated': (scoreboard: readonly ScoreDto[]) => void;
   /** To everyone: final scores. */
   'game:finished': (scoreboard: readonly ScoreDto[]) => void;
+  /** To everyone, right after `game:finished` (and again if the host corrects an answer later). */
+  'game:recap': (recap: GameRecapDto) => void;
 }

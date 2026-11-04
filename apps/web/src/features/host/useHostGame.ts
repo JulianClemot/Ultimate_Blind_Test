@@ -33,6 +33,7 @@ export const useHostGame = (session: HostSession) => {
     dispatch({ type: 'scoreboardUpdated', scoreboard }),
   );
   useSocketEvent('game:finished', (scoreboard) => dispatch({ type: 'gameFinished', scoreboard }));
+  useSocketEvent('game:recap', (recap) => dispatch({ type: 'recapReceived', recap }));
 
   // Acks are dispatched too: the matching events may arrive before or after them.
   const nextSong = useMutation({

@@ -350,13 +350,44 @@ describe('blind test (HTTP + Socket.IO)', () => {
       data: { judgedByHost: true, verdict: { title: true, artist: true } },
     });
     expect(await judgedForPlayer).toMatchObject({ id: wrong.data.id, judgedByHost: true });
-    expect((await scoresForPlayer)[0]?.points).toBeGreaterThan(2);
+    const totalAfterLastSong = (await scoresForPlayer)[0]?.points;
+    expect(totalAfterLastSong).toBeGreaterThan(2);
 
     // Every round played: the next action finishes the game.
     const finishedForPlayer = nextEvent(player, 'game:finished');
+    const recapForPlayer = nextEvent(player, 'game:recap');
+    const recapForHost = nextEvent(host, 'game:recap');
     const end = await host.emitWithAck('song:next');
     expect(end).toMatchObject({ ok: true, data: { kind: 'finished' } });
-    expect((await finishedForPlayer)[0]).toMatchObject({ playerId: aliceId });
+    // The final scores include the points of the last song (corrected by the host).
+    expect((await finishedForPlayer)[0]).toMatchObject({
+      playerId: aliceId,
+      points: totalAfterLastSong,
+    });
+
+    // Everyone gets the recap: standings, replay of the songs, and never answer texts.
+    const recap = await recapForPlayer;
+    expect(await recapForHost).toEqual(recap);
+    expect(recap).toMatchObject({
+      gameName: 'Party',
+      standings: [{ rank: 1, playerId: aliceId, playerName: 'Alice', points: totalAfterLastSong }],
+      superlatives: [],
+      songs: [
+        {
+          roundNumber: 1,
+          title: 'One More Time',
+          artist: 'Daft Punk',
+          results: [{ playerId: aliceId, foundTitle: true, foundArtist: true, wrongAttempts: 0 }],
+        },
+        {
+          roundNumber: 2,
+          title: 'Take On Me',
+          artist: 'a-ha',
+          results: [{ playerId: aliceId, foundTitle: true, wrongAttempts: 0 }],
+        },
+      ],
+    });
+    expect(JSON.stringify(recap)).not.toMatch(/daft punk one more time|Ah-ha, take me on/i);
 
     const resumed = await (
       await openSocket()
@@ -366,6 +397,33 @@ describe('blind test (HTTP + Socket.IO)', () => {
       data: { status: 'finished', player: { name: 'Alice' } },
     });
     expect(resumed.ok && 'answers' in resumed.data).toBe(false);
+    // A player coming back after the end, like a host re-attaching, gets the recap too.
+    expect(resumed.ok && resumed.data.recap).toEqual(recap);
+    const reattached = await (
+      await openSocket()
+    ).emitWithAck('host:attach', { gameId: party.gameId, hostToken: party.hostToken });
+    expect(reattached.ok && reattached.data.recap).toEqual(recap);
+
+    // A correction made after the end updates the recap for everyone.
+    const updatedRecap = nextEvent(player, 'game:recap');
+    await host.emitWithAck('answer:judge', {
+      answerId: wrong.data.id,
+      title: false,
+      artist: false,
+    });
+    expect((await updatedRecap).songs[1]?.results[0]).toMatchObject({
+      foundTitle: false,
+      wrongAttempts: 1,
+    });
+  });
+
+  it('has no recap before the game is finished', async () => {
+    const { party, host } = await launchParty([round('42', 'classic')]);
+    await host.emitWithAck('song:next');
+    const snapshot = await (
+      await openSocket()
+    ).emitWithAck('host:attach', { gameId: party.gameId, hostToken: party.hostToken });
+    expect(snapshot).toMatchObject({ ok: true, data: { status: 'playing', recap: null } });
   });
 
   it('gives the preview back to a host reattaching mid-song', async () => {

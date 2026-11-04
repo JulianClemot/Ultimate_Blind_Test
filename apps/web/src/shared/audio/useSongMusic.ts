@@ -30,7 +30,13 @@ export const useSongMusic = (song: HostSongDto | null) => {
   const revealedSongId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!song) return;
+    if (!song) {
+      // No song any more (the game ended): whatever is still playing must stop.
+      if (playedSongId.current !== null) player.stop();
+      playedSongId.current = null;
+      revealedSongId.current = null;
+      return;
+    }
     if (playedSongId.current !== song.id) {
       playedSongId.current = song.id;
       revealedSongId.current = song.revealed ? song.id : null;

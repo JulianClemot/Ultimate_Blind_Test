@@ -1,5 +1,6 @@
 import type {
   AnswerDto,
+  GameRecapDto,
   GameSnapshotDto,
   HostSongDto,
   PlayerDto,
@@ -19,7 +20,8 @@ export type HostGameAction =
   | { type: 'answerJudged'; answer: AnswerDto }
   | { type: 'songRevealed'; reveal: RevealDto }
   | { type: 'scoreboardUpdated'; scoreboard: readonly ScoreDto[] }
-  | { type: 'gameFinished'; scoreboard: readonly ScoreDto[] };
+  | { type: 'gameFinished'; scoreboard: readonly ScoreDto[] }
+  | { type: 'recapReceived'; recap: GameRecapDto };
 
 const byArrival = (a: AnswerDto, b: AnswerDto) => a.receivedAt - b.receivedAt;
 
@@ -78,5 +80,7 @@ export const hostGameReducer = (state: HostGameState, action: HostGameAction): H
       };
     case 'gameFinished':
       return { ...state, status: 'finished', scoreboard: action.scoreboard, hasNextSong: false };
+    case 'recapReceived':
+      return { ...state, recap: action.recap };
   }
 };

@@ -57,7 +57,11 @@ These rules are enforced by `pnpm depcruise` (`.dependency-cruiser.cjs`) in CI.
 - Commands use **acks** (request/response with `{ ok, data | error }`): `song:next`, `song:reveal`,
   `answer:judge`, `game:finish`, `answer:submit`. Server pushes use events (`song:started` to
   players, `host:song-started` with the preview to hosts, `answer:received`, `answer:judged`,
-  `song:revealed`, `scoreboard:updated`, `game:finished`). Contracts live in `packages/shared/src/events.ts`.
+  `song:revealed`, `scoreboard:updated`, `game:finished`, `game:recap`). Contracts live in `packages/shared/src/events.ts`.
+- **Recap**: once finished, `Game.recap()` (pure, `domain/game/recap.ts`) derives standings, awards
+  and a per-song replay from the answers. It is pushed with `game:recap` (again after a late host
+  correction) and carried by `GameSnapshotDto.recap` / `PlayerSessionDto.recap`. It never contains
+  answer texts. Spec: `docs/specs/game-recap.md`.
 - **Secrecy**: players never get the preview URL; title and artist leave the server only at the
   reveal (the host does not know the answer either). Players only see scores of revealed songs.
 - **The server clock is authoritative.** `SubmitAnswer` reads `Clock.now()` _first_, before any I/O.

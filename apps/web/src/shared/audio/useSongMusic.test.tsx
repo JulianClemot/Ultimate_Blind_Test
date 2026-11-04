@@ -72,6 +72,22 @@ describe('useSongMusic', () => {
     expect(play).toHaveBeenCalledTimes(1);
   });
 
+  it('stops the music when the song goes away, e.g. when the game ends', () => {
+    const { player, rerender } = setup(song({ revealed: true, excerptSec: 4 }));
+    expect(player.stop).not.toHaveBeenCalled();
+
+    rerender({ current: null });
+
+    expect(player.stop).toHaveBeenCalledTimes(1);
+  });
+
+  it('plays again if the same song comes back after the music was stopped', () => {
+    const { play, rerender } = setup(song());
+    rerender({ current: null });
+    rerender({ current: song() });
+    expect(play).toHaveBeenCalledTimes(2);
+  });
+
   it('exposes replay and stop controls, and stops when unmounted', () => {
     const { player, play, result, unmount } = setup(song({ excerptSec: 4 }));
     act(() => result.current.replay());

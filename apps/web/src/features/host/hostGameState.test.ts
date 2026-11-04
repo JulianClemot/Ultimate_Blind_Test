@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { answer, hostSong, snapshot } from '@/test/fixtures';
+import { answer, gameRecap, hostSong, snapshot } from '@/test/fixtures';
 
 import { hostGameReducer, type HostGameState } from './hostGameState';
 
@@ -92,5 +92,18 @@ describe('hostGameReducer', () => {
       status: 'finished',
       hasNextSong: false,
     });
+  });
+
+  it('keeps the recap sent when the game ends', () => {
+    const finished = hostGameReducer(playing, { type: 'gameFinished', scoreboard: [] });
+    const recap = gameRecap();
+    expect(finished?.recap).toBeNull();
+    expect(hostGameReducer(finished, { type: 'recapReceived', recap })?.recap).toBe(recap);
+    // A correction after the end sends an updated recap, which replaces the previous one.
+    const corrected = gameRecap({ gameName: 'Updated' });
+    const next = hostGameReducer(finished, { type: 'recapReceived', recap });
+    expect(hostGameReducer(next, { type: 'recapReceived', recap: corrected })?.recap).toBe(
+      corrected,
+    );
   });
 });

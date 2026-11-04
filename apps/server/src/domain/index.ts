@@ -7,6 +7,7 @@ export * from './game/GameCode';
 export * from './game/GameErrors';
 export * from './game/Player';
 export * from './game/PlayerName';
+export * from './game/recap';
 export * from './game/Round';
 export * from './game/scoring';
 export * from './game/Song';

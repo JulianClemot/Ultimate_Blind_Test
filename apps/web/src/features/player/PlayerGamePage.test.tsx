@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useSessionStore } from '@/shared/session/sessionStore';
-import { playerSession } from '@/test/fixtures';
+import { gameRecap, playerSession } from '@/test/fixtures';
 import { fakeGateway, renderWithRealtime } from '@/test/renderWithRealtime';
 
 import { PlayerGamePage } from './PlayerGamePage';
@@ -61,5 +61,28 @@ describe('<PlayerGamePage />', () => {
 
     expect(await screen.findByLabelText('Your answer')).toBeInTheDocument();
     expect(screen.queryByText(/How the game works/)).not.toBeInTheDocument();
+  });
+
+  describe('when the game is over', () => {
+    it('shows the recap, worded for the player', async () => {
+      renderPage(playerSession({ status: 'finished', recap: gameRecap() }));
+
+      expect(await screen.findByText('Friday night — final results')).toBeInTheDocument();
+      expect(screen.getByText('You finished #1 with 5 pts')).toBeInTheDocument();
+      expect(screen.getByRole('list', { name: 'Awards' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Share my results' })).toBeInTheDocument();
+    });
+
+    it('shows the plain scores until the recap arrives', async () => {
+      renderPage(
+        playerSession({
+          status: 'finished',
+          scoreboard: [{ playerId: 'p1', playerName: 'Alice', points: 3 }],
+        }),
+      );
+
+      expect(await screen.findByText('Friday night — final scores')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /share/i })).not.toBeInTheDocument();
+    });
   });
 });

@@ -143,6 +143,57 @@ export interface AnswerDto {
   readonly judgedByHost: boolean;
 }
 
+// ── End-of-game recap ───────────────────────────────────────────────────────
+
+export type SuperlativeKindDto = 'fastest-finger' | 'sniper' | 'stubborn' | 'comeback-kid';
+
+export interface StandingDto {
+  /** Ties share a rank (1, 2, 2, 4). */
+  readonly rank: number;
+  readonly playerId: string;
+  readonly playerName: string;
+  readonly points: number;
+}
+
+export interface SuperlativeDto {
+  readonly kind: SuperlativeKindDto;
+  readonly playerId: string;
+  readonly playerName: string;
+  /** Average find time (ms), songs found first, wrong attempts, or places gained, by kind. */
+  readonly value: number;
+}
+
+/** What a player did on a song. Never the text of their answers. */
+export interface PlayerSongResultDto {
+  readonly playerId: string;
+  readonly playerName: string;
+  readonly points: number;
+  readonly foundTitle: boolean;
+  readonly foundArtist: boolean;
+  /** ms after the song started, null when never found. */
+  readonly foundAtMs: number | null;
+  readonly wrongAttempts: number;
+}
+
+export interface SongRecapDto {
+  readonly songId: string;
+  readonly roundNumber: number;
+  readonly roundName: string;
+  readonly number: number;
+  readonly title: string;
+  readonly artist: string;
+  /** Who found the song first, then the others. */
+  readonly results: readonly PlayerSongResultDto[];
+}
+
+/** Sent once the game is finished, when every song is revealed. */
+export interface GameRecapDto {
+  readonly gameName: string;
+  readonly standings: readonly StandingDto[];
+  readonly superlatives: readonly SuperlativeDto[];
+  readonly songs: readonly SongRecapDto[];
+}
+
 export interface GameSnapshotDto {
   readonly id: string;
   readonly code: string;
@@ -159,6 +210,8 @@ export interface GameSnapshotDto {
   readonly scoreboard: readonly ScoreDto[];
   /** False when the next action finishes the game. */
   readonly hasNextSong: boolean;
+  /** Null until the game is finished. */
+  readonly recap: GameRecapDto | null;
 }
 
 export interface CreateGameResponseDto {
@@ -182,6 +235,8 @@ export interface PlayerSessionDto {
   readonly myAnswers: readonly AnswerDto[];
   /** Scores of revealed songs only. */
   readonly scoreboard: readonly ScoreDto[];
+  /** Null until the game is finished. */
+  readonly recap: GameRecapDto | null;
 }
 
 export type NextSongResponseDto =

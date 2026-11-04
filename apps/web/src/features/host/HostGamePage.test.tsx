@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useSessionStore } from '@/shared/session/sessionStore';
-import { hostSong, snapshot } from '@/test/fixtures';
+import { gameRecap, hostSong, snapshot } from '@/test/fixtures';
 import { fakeGateway, renderWithRealtime } from '@/test/renderWithRealtime';
 
 import { HostGamePage } from './HostGamePage';
@@ -96,6 +96,22 @@ describe('<HostGamePage />', () => {
       renderPage(snapshot());
       await userEvent.click(await screen.findByRole('button', { name: 'Scores' }));
       expect(screen.getByRole('complementary', { name: 'Scores' })).toHaveTextContent('Alice0 pts');
+    });
+  });
+
+  describe('when the game is over', () => {
+    it('shows the recap with a button to share the results', async () => {
+      renderPage(snapshot({ status: 'finished', hasNextSong: false, recap: gameRecap() }));
+
+      expect(await screen.findByText('Friday night — final results')).toBeInTheDocument();
+      expect(screen.getByRole('list', { name: 'Podium' })).toHaveTextContent('Alice');
+      expect(screen.getByRole('button', { name: 'Share the results' })).toBeInTheDocument();
+    });
+
+    it('shows the plain scores until the recap arrives', async () => {
+      renderPage(snapshot({ status: 'finished', hasNextSong: false }));
+
+      expect(await screen.findByText('Friday night — final scores')).toBeInTheDocument();
     });
   });
 });

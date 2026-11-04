@@ -1,6 +1,7 @@
 import type {
   AnswerDto,
   GameDesignDto,
+  GameRecapDto,
   GameSnapshotDto,
   HostSongDto,
   PlayerDto,
@@ -115,6 +116,34 @@ const toRoundSummaries = (game: Game): RoundSummaryDto[] =>
     rules: round.plan.rules.toProps(),
   }));
 
+export const toGameRecapDto = (game: Game): GameRecapDto | null => {
+  const recap = game.recap();
+  if (!recap) return null;
+  return {
+    gameName: game.name,
+    standings: recap.standings.map(({ rank, player, points }) => ({
+      rank,
+      playerId: player.id,
+      playerName: player.name.value,
+      points,
+    })),
+    superlatives: recap.superlatives.map(({ kind, player, value }) => ({
+      kind,
+      playerId: player.id,
+      playerName: player.name.value,
+      value,
+    })),
+    songs: recap.songs.map((song) => ({
+      ...song,
+      results: song.results.map(({ player, ...result }) => ({
+        playerId: player.id,
+        playerName: player.name.value,
+        ...result,
+      })),
+    })),
+  };
+};
+
 export const toGameSnapshotDto = (game: Game): GameSnapshotDto => {
   const song = game.currentSong;
   return {
@@ -129,6 +158,7 @@ export const toGameSnapshotDto = (game: Game): GameSnapshotDto => {
     answers: song ? song.answersByArrival().map((a) => toAnswerDto(game, a)) : [],
     scoreboard: toPublicScoreboard(game),
     hasNextSong: game.upcomingRound !== undefined,
+    recap: toGameRecapDto(game),
   };
 };
 
@@ -145,5 +175,6 @@ export const toPlayerSessionDto = ({ game, player }: PlayerSession): PlayerSessi
     reveal: revealOf(game),
     myAnswers: song ? song.answersOf(player.id).map((a) => toAnswerDto(game, a)) : [],
     scoreboard: toPublicScoreboard(game),
+    recap: toGameRecapDto(game),
   };
 };

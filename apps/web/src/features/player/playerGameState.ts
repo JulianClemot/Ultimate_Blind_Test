@@ -1,4 +1,11 @@
-import type { AnswerDto, PlayerSessionDto, RevealDto, ScoreDto, SongDto } from '@ubt/shared';
+import type {
+  AnswerDto,
+  GameRecapDto,
+  PlayerSessionDto,
+  RevealDto,
+  ScoreDto,
+  SongDto,
+} from '@ubt/shared';
 
 /** Pure state transitions of the player screen — easy to unit test. */
 
@@ -11,7 +18,8 @@ export type PlayerGameAction =
   | { type: 'answerJudged'; answer: AnswerDto }
   | { type: 'songRevealed'; reveal: RevealDto }
   | { type: 'scoreboardUpdated'; scoreboard: readonly ScoreDto[] }
-  | { type: 'gameFinished'; scoreboard: readonly ScoreDto[] };
+  | { type: 'gameFinished'; scoreboard: readonly ScoreDto[] }
+  | { type: 'recapReceived'; recap: GameRecapDto };
 
 export const playerGameReducer = (
   state: PlayerGameState,
@@ -46,6 +54,8 @@ export const playerGameReducer = (
       return { ...state, scoreboard: action.scoreboard };
     case 'gameFinished':
       return { ...state, status: 'finished', scoreboard: action.scoreboard };
+    case 'recapReceived':
+      return { ...state, recap: action.recap };
   }
 };
 

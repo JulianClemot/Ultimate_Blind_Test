@@ -2,6 +2,7 @@ import type { GameEventPublisher } from '../../../application';
 import type { Answer, Game, Player, Song } from '../../../domain';
 import {
   toAnswerDto,
+  toGameRecapDto,
   toHostSongDto,
   toPlayerDto,
   toPublicScoreboard,
@@ -42,9 +43,17 @@ export class SocketIoGameEventPublisher implements GameEventPublisher {
 
   scoreboardUpdated(game: Game): void {
     this.io.to(rooms.game(game.id)).emit('scoreboard:updated', toPublicScoreboard(game));
+    // A correction after the end changes the awards and the replay too.
+    if (game.status === 'finished') this.emitRecap(game);
   }
 
   gameFinished(game: Game): void {
     this.io.to(rooms.game(game.id)).emit('game:finished', toPublicScoreboard(game));
+    this.emitRecap(game);
+  }
+
+  private emitRecap(game: Game): void {
+    const recap = toGameRecapDto(game);
+    if (recap) this.io.to(rooms.game(game.id)).emit('game:recap', recap);
   }
 }

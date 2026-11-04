@@ -8,6 +8,7 @@ import type { GameCode } from './GameCode';
 import { gameError, type GameError } from './GameErrors';
 import type { Player } from './Player';
 import type { PlayerName } from './PlayerName';
+import { buildRecap, type GameRecap } from './recap';
 import { Round } from './Round';
 import type { Song, SubmitAnswerCommand } from './Song';
 
@@ -181,6 +182,11 @@ export class Game {
       .sort(
         (a, b) => b.points - a.points || a.player.name.value.localeCompare(b.player.name.value),
       );
+  }
+
+  /** End-of-game recap; only available once the game is finished. */
+  recap(): GameRecap | undefined {
+    return this.finished ? buildRecap(this.listPlayers(), this.rounds) : undefined;
   }
 
   /** Whether the game may leave the current song (to play another one or to finish). */

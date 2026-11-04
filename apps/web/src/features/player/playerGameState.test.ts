@@ -1,7 +1,7 @@
 import type { SongDto } from '@ubt/shared';
 import { describe, expect, it } from 'vitest';
 
-import { answer, playerSession } from '@/test/fixtures';
+import { answer, gameRecap, playerSession } from '@/test/fixtures';
 
 import { hasFoundEverything, playerGameReducer } from './playerGameState';
 
@@ -67,6 +67,25 @@ describe('playerGameReducer', () => {
     });
     expect(playerGameReducer(revealed, { type: 'gameFinished', scoreboard })?.status).toBe(
       'finished',
+    );
+  });
+});
+
+describe('playerGameReducer recap', () => {
+  it('keeps the recap sent when the game ends, and the latest one after a correction', () => {
+    const finished = playerGameReducer(playerSession({ status: 'playing' }), {
+      type: 'gameFinished',
+      scoreboard: [],
+    });
+    expect(finished?.recap).toBeNull();
+
+    const recap = gameRecap();
+    const withRecap = playerGameReducer(finished, { type: 'recapReceived', recap });
+    expect(withRecap?.recap).toBe(recap);
+
+    const corrected = gameRecap({ gameName: 'Updated' });
+    expect(playerGameReducer(withRecap, { type: 'recapReceived', recap: corrected })?.recap).toBe(
+      corrected,
     );
   });
 });
