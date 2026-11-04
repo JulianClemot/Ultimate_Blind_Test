@@ -67,6 +67,15 @@ describe('hostGameReducer', () => {
     expect(judged?.answers[0]).toMatchObject({ judgedByHost: true, verdict: { title: true } });
   });
 
+  it('flags that everyone answered, until the reveal', () => {
+    const flagged = hostGameReducer(playing, { type: 'allAnswered', songId: 's1' });
+    expect(flagged?.everyoneAnswered).toBe(true);
+    expect(hostGameReducer(playing, { type: 'allAnswered', songId: 'other' })).toBe(playing);
+    expect(hostGameReducer(flagged, { type: 'songRevealed', reveal })?.everyoneAnswered).toBe(
+      false,
+    );
+  });
+
   it('shows the reveal and its scores', () => {
     const scores = [{ playerId: 'p1', playerName: 'Alice', points: 2 }];
     const state = hostGameReducer(playing, {

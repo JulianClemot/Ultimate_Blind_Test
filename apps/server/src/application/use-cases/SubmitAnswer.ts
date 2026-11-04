@@ -1,14 +1,30 @@
-import { err, ok, type Result } from '../../domain';
+import { err, ok, type Game, type Result } from '../../domain';
 import { gameNotFound, type UseCaseError } from '../errors';
-import type { GameAnswer, SubmitAnswerCommand, SubmitAnswerUseCase } from '../ports/in';
-import type { Clock, GameEventPublisher, GameRepository, IdGenerator } from '../ports/out';
+import type {
+  AutoRevealSongUseCase,
+  GameAnswer,
+  SubmitAnswerCommand,
+  SubmitAnswerUseCase,
+} from '../ports/in';
+import type {
+  Clock,
+  GameEventPublisher,
+  GameRepository,
+  IdGenerator,
+  Scheduler,
+} from '../ports/out';
 
 export class SubmitAnswer implements SubmitAnswerUseCase {
+  /** Pause between "everyone answered" and the reveal. */
+  static readonly REVEAL_DELAY_MS = 2000;
+
   constructor(
     private readonly games: GameRepository,
     private readonly ids: IdGenerator,
     private readonly clock: Clock,
     private readonly events: GameEventPublisher,
+    private readonly scheduler: Scheduler,
+    private readonly autoReveal: AutoRevealSongUseCase,
   ) {}
 
   async execute(command: SubmitAnswerCommand): Promise<Result<GameAnswer, UseCaseError>> {
@@ -29,6 +45,18 @@ export class SubmitAnswer implements SubmitAnswerUseCase {
 
     await this.games.save(game);
     this.events.answerReceived(game, answer.value);
+    this.revealOnceEveryoneAnswered(game);
     return ok({ game, answer: answer.value });
+  }
+
+  /** Announces that everyone answered, then reveals the song after a short pause. */
+  private revealOnceEveryoneAnswered(game: Game): void {
+    const song = game.currentSong;
+    if (!song || !game.everyoneHasAnswered()) return;
+
+    this.events.allAnswered(game, song);
+    this.scheduler.after(SubmitAnswer.REVEAL_DELAY_MS, async () => {
+      await this.autoReveal.execute({ gameId: game.id, songId: song.id });
+    });
   }
 }

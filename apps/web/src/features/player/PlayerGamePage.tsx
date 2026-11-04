@@ -16,7 +16,7 @@ import { Recap } from '@/shared/ui/Recap';
 import { GameOverview } from '@/shared/ui/GameOverview';
 import { Scoreboard } from '@/shared/ui/Scoreboard';
 
-import { foundParts, hasFoundEverything } from './playerGameState';
+import { foundParts } from './playerGameState';
 import { usePlayerGame } from './usePlayerGame';
 
 const AnswerForm = ({ onSubmit, pending }: { onSubmit: (t: string) => void; pending: boolean }) => {
@@ -30,7 +30,7 @@ const AnswerForm = ({ onSubmit, pending }: { onSubmit: (t: string) => void; pend
     <form onSubmit={submit} className="flex flex-col gap-3">
       <Input
         aria-label="Your answer"
-        placeholder="Artist – Title"
+        placeholder="Artist – Title (one guess only!)"
         autoFocus
         autoComplete="off"
         value={text}
@@ -68,6 +68,7 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
   const { state, rejoinError, submitAnswer } = usePlayerGame(session);
   const song = state?.currentSong ?? null;
   const open = song !== null && !song.revealed;
+  const hasAnswered = (state?.myAnswers.length ?? 0) > 0;
   const remaining = useCountdown(open ? song.startedAt + song.answerTimeSec * 1000 : null);
 
   if (rejoinError) return <ErrorMessage error={rejoinError} />;
@@ -112,16 +113,25 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
 
         {song && <SongProgress song={song} answers={state.myAnswers} />}
 
-        {open && remaining !== 0 && !hasFoundEverything(song, state.myAnswers) && (
+        {open && state.everyoneAnswered && (
+          <p role="status" className="rounded-lg bg-secondary p-4 text-center font-semibold">
+            Everyone answered — waiting for the result…
+          </p>
+        )}
+        {open && !state.everyoneAnswered && hasAnswered && (
+          <p role="status" className="font-medium">
+            Answer sent! Waiting for the others…
+          </p>
+        )}
+        {open && !hasAnswered && remaining !== 0 && (
           <>
             <AnswerForm onSubmit={(t) => submitAnswer.mutate(t)} pending={submitAnswer.isPending} />
             <ErrorMessage error={submitAnswer.error} />
           </>
         )}
-        {open && hasFoundEverything(song, state.myAnswers) && (
-          <p className="font-medium">Well done! Wait for the reveal…</p>
+        {open && !hasAnswered && remaining === 0 && (
+          <p className="text-muted-foreground">Time is up!</p>
         )}
-        {open && remaining === 0 && <p className="text-muted-foreground">Time is up!</p>}
 
         {state.reveal && (
           <div className="rounded-lg bg-secondary p-4 text-center">

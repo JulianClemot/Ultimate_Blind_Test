@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   FixedClock,
   InMemoryGameDesignRepository,
+  ManualScheduler,
   RecordingEventPublisher,
   roundInput,
   SequenceRandom,
@@ -15,6 +16,7 @@ import {
 import { InMemoryGameRepository } from '../../infrastructure/secondary/persistence/InMemoryGameRepository';
 import type { RoundPlanInput } from '../ports/in';
 import { AttachHost } from './AttachHost';
+import { AutoRevealSong } from './AutoRevealSong';
 import { CreateGameDesign } from './CreateGameDesign';
 import { FinishGame } from './FinishGame';
 import { JoinGame } from './JoinGame';
@@ -31,6 +33,7 @@ describe('party use cases', () => {
   let games: InMemoryGameRepository;
   let clock: FixedClock;
   let events: RecordingEventPublisher;
+  let scheduler: ManualScheduler;
   let ids: SequentialIdGenerator;
   let codes: StubGameCodeGenerator;
   let catalog: StubMusicCatalog;
@@ -41,6 +44,7 @@ describe('party use cases', () => {
     games = new InMemoryGameRepository();
     clock = new FixedClock(10_000);
     events = new RecordingEventPublisher();
+    scheduler = new ManualScheduler();
     ids = new SequentialIdGenerator();
     codes = new StubGameCodeGenerator(['ABCDEF']);
     catalog = new StubMusicCatalog({
@@ -82,7 +86,14 @@ describe('party use cases', () => {
   const reveal = (host: { gameId: string; hostToken: string }) =>
     new RevealSong(games, clock, events).execute(host);
   const answer = (gameId: string, playerId: string, text: string) =>
-    new SubmitAnswer(games, ids, clock, events).execute({
+    new SubmitAnswer(
+      games,
+      ids,
+      clock,
+      events,
+      scheduler,
+      new AutoRevealSong(games, clock, events),
+    ).execute({
       gameId,
       playerId,
       text,
@@ -215,6 +226,7 @@ describe('party use cases', () => {
     it('checks answers with the server clock and notifies the host', async () => {
       const { game, host } = await launch();
       const { player } = unwrap(await join('Alice'));
+      unwrap(await join('Bob'));
       unwrap(await nextSong(host));
       clock.advance(2_500);
 
@@ -232,6 +244,7 @@ describe('party use cases', () => {
     it('lets the host correct a verdict, then publishes scores once revealed', async () => {
       const { game, host } = await launch();
       const { player } = unwrap(await join('Alice'));
+      unwrap(await join('Bob'));
       unwrap(await nextSong(host));
       const { answer: sent } = unwrap(await answer(game.id, player.id, 'the one with the piano'));
       expect(sent.verdict).toEqual({ title: false, artist: false });
@@ -255,6 +268,70 @@ describe('party use cases', () => {
       unwrap(await judge(false));
       expect(events.types().slice(-2)).toEqual(['answerJudged', 'scoreboardUpdated']);
       expect(game.scoreboard({ revealedOnly: true })[0]?.points).toBe(0);
+    });
+
+    describe('once everyone answered', () => {
+      const twoPlayersOnASong = async () => {
+        const { game, host } = await launch();
+        const alice = unwrap(await join('Alice')).player;
+        const bob = unwrap(await join('Bob')).player;
+        unwrap(await nextSong(host));
+        return { game, host, alice, bob };
+      };
+
+      it('waits for the last player before announcing anything', async () => {
+        const { game, alice } = await twoPlayersOnASong();
+        unwrap(await answer(game.id, alice.id, 'no idea'));
+        expect(events.types()).not.toContain('allAnswered');
+        expect(scheduler.scheduled).toHaveLength(0);
+      });
+
+      it('announces it, then reveals the song after the pause', async () => {
+        const { game, alice, bob } = await twoPlayersOnASong();
+        unwrap(await answer(game.id, alice.id, 'no idea'));
+        unwrap(await answer(game.id, bob.id, 'Artist t1 - Title t1'));
+
+        expect(events.types().slice(-2)).toEqual(['answerReceived', 'allAnswered']);
+        expect(scheduler.scheduled.map((s) => s.delayMs)).toEqual([2_000]);
+        expect(game.currentSong?.isRevealed).toBe(false);
+
+        await scheduler.runAll();
+
+        expect(game.currentSong?.isRevealed).toBe(true);
+        expect(events.types().at(-1)).toBe('songRevealed');
+      });
+
+      it('does nothing if the host revealed the song during the pause', async () => {
+        const { game, host, alice, bob } = await twoPlayersOnASong();
+        unwrap(await answer(game.id, alice.id, 'a'));
+        unwrap(await answer(game.id, bob.id, 'b'));
+        unwrap(await reveal(host));
+        const before = events.types().length;
+
+        await scheduler.runAll();
+
+        expect(events.types()).toHaveLength(before);
+      });
+
+      it('does not reveal the next song if the host already moved on', async () => {
+        const { game, host, alice, bob } = await twoPlayersOnASong();
+        unwrap(await answer(game.id, alice.id, 'a'));
+        unwrap(await answer(game.id, bob.id, 'b'));
+        unwrap(await reveal(host));
+        unwrap(await nextSong(host));
+
+        await scheduler.runAll();
+
+        expect(game.currentSong?.number).toBe(2);
+        expect(game.currentSong?.isRevealed).toBe(false);
+      });
+
+      it('gives each player a single guess', async () => {
+        const { game, alice } = await twoPlayersOnASong();
+        unwrap(await answer(game.id, alice.id, 'first'));
+        const second = await answer(game.id, alice.id, 'second');
+        expect(!second.ok && second.error.code).toBe('ALREADY_ANSWERED');
+      });
     });
 
     it('refuses answers after the reveal', async () => {

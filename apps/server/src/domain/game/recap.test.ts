@@ -137,9 +137,9 @@ describe('game recap', () => {
     it('lists each song with what every player did', () => {
       newGame(2, ['alice', 'bob', 'chloe']);
       playSong([
-        ['alice', 5_000, 'miss'],
         ['alice', 6_000, 'hit'],
         ['bob', 2_000, 'title'],
+        ['chloe', 7_000, 'miss'],
       ]);
       playSong([['chloe', 1_500, 'hit']]);
 
@@ -168,9 +168,9 @@ describe('game recap', () => {
         foundTitle: true,
         foundArtist: true,
         foundAtMs: 6_000,
-        wrongAttempts: 1,
+        wrongAttempts: 0,
       });
-      expect(songs[0]?.results[2]).toMatchObject({ foundAtMs: null, points: 0, wrongAttempts: 0 });
+      expect(songs[0]?.results[2]).toMatchObject({ foundAtMs: null, points: 0, wrongAttempts: 1 });
       expect(songs[1]?.results[0]).toMatchObject({ player: { id: 'chloe' }, foundAtMs: 1_500 });
     });
 
@@ -274,27 +274,22 @@ describe('game recap', () => {
 
     describe('stubborn', () => {
       it('goes to the player with the most wrong attempts', () => {
-        newGame(2, ['alice', 'bob']);
+        newGame(4, ['alice', 'bob']);
         playSong([
           ['bob', 1_000, 'miss'],
-          ['bob', 2_000, 'miss'],
-          ['bob', 3_000, 'miss'],
           ['alice', 4_000, 'miss'],
         ]);
-        playSong([
-          ['bob', 1_000, 'miss'],
-          ['bob', 2_000, 'miss'],
-        ]);
+        playSong([['bob', 1_000, 'miss']]);
+        playSong([['bob', 1_000, 'miss']]);
+        playSong([['bob', 1_000, 'miss']]);
 
-        expect(award(finish(), 'stubborn')).toMatchObject({ player: { id: 'bob' }, value: 5 });
+        expect(award(finish(), 'stubborn')).toMatchObject({ player: { id: 'bob' }, value: 4 });
       });
 
       it('needs at least 3 wrong attempts', () => {
-        newGame(1, ['alice', 'bob']);
-        playSong([
-          ['bob', 1_000, 'miss'],
-          ['bob', 2_000, 'miss'],
-        ]);
+        newGame(2, ['alice', 'bob']);
+        playSong([['bob', 1_000, 'miss']]);
+        playSong([['bob', 1_000, 'miss']]);
 
         expect(award(finish(), 'stubborn')).toBeUndefined();
       });
@@ -336,16 +331,14 @@ describe('game recap', () => {
     });
 
     it('breaks ties with the better final standing', () => {
-      newGame(2, ['alice', 'bob', 'chloe']);
-      playSong([
-        ['alice', 1_000, 'hit'],
-        ['bob', 1_000, 'miss'],
-        ['bob', 2_000, 'miss'],
-        ['bob', 3_000, 'miss'],
-        ['chloe', 1_000, 'miss'],
-        ['chloe', 2_000, 'miss'],
-        ['chloe', 3_000, 'miss'],
-      ]);
+      newGame(3, ['alice', 'bob', 'chloe']);
+      for (let i = 0; i < 3; i++) {
+        playSong([
+          ['alice', 1_000, 'hit'],
+          ['bob', 1_000, 'miss'],
+          ['chloe', 2_000, 'miss'],
+        ]);
+      }
 
       // Bob and Chloé both have 3 wrong attempts and 0 points: the name order decides.
       expect(award(finish(), 'stubborn')).toMatchObject({ player: { id: 'bob' }, value: 3 });

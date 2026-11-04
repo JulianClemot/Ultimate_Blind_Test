@@ -157,6 +157,13 @@ export class Game {
     return song.reveal(at);
   }
 
+  /** True while a song is open and every player of the game has sent their (single) answer. */
+  everyoneHasAnswered(): boolean {
+    const song = this.currentSong;
+    if (!song || song.isRevealed || this.finished || this.players.size === 0) return false;
+    return this.listPlayers().every((player) => song.hasAnswered(player.id));
+  }
+
   judgeAnswer(answerId: string, verdict: Verdict): Result<Answer, GameError> {
     const song = this.currentSong;
     if (!song) return err(gameError('NO_ACTIVE_SONG', 'No song is being played'));

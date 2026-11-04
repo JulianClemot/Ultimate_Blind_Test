@@ -11,6 +11,8 @@ interface SongPanelProps {
   readonly reveal: RevealDto | null;
   readonly roundCount: number;
   readonly hasNextSong: boolean;
+  /** Every player answered: the server reveals the song in a moment. */
+  readonly everyoneAnswered: boolean;
   readonly pending: boolean;
   readonly onNext: () => void;
   readonly onReveal: () => void;
@@ -18,12 +20,13 @@ interface SongPanelProps {
   readonly onStop: () => void;
 }
 
-/** Current song, its countdown and the host controls. Reveals automatically when time is up. */
+/** Current song, its countdown and the host controls. Reveals automatically when time is up or everyone answered. */
 export const SongPanel = ({
   song,
   reveal,
   roundCount,
   hasNextSong,
+  everyoneAnswered,
   pending,
   onNext,
   onReveal,
@@ -65,6 +68,12 @@ export const SongPanel = ({
       ) : (
         <p className="text-muted-foreground">
           Wait for everyone to join, then play the first song.
+        </p>
+      )}
+
+      {open && everyoneAnswered && (
+        <p role="status" className="rounded-lg bg-secondary p-4 text-center font-semibold">
+          Everyone answered — revealing the result…
         </p>
       )}
 

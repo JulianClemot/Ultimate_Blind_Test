@@ -18,6 +18,7 @@ export type HostGameAction =
   | { type: 'songStarted'; song: HostSongDto }
   | { type: 'answerReceived'; answer: AnswerDto }
   | { type: 'answerJudged'; answer: AnswerDto }
+  | { type: 'allAnswered'; songId: string }
   | { type: 'songRevealed'; reveal: RevealDto }
   | { type: 'scoreboardUpdated'; scoreboard: readonly ScoreDto[] }
   | { type: 'gameFinished'; scoreboard: readonly ScoreDto[] }
@@ -53,6 +54,7 @@ export const hostGameReducer = (state: HostGameState, action: HostGameAction): H
             currentSong: action.song,
             reveal: null,
             answers: [],
+            everyoneAnswered: false,
             hasNextSong: !isLastSong(state, action.song),
           };
     case 'answerReceived':
@@ -64,10 +66,13 @@ export const hostGameReducer = (state: HostGameState, action: HostGameAction): H
         ...state,
         answers: state.answers.map((a) => (a.id === action.answer.id ? action.answer : a)),
       };
+    case 'allAnswered':
+      return state.currentSong?.id === action.songId ? { ...state, everyoneAnswered: true } : state;
     case 'songRevealed':
       if (state.currentSong?.id !== action.reveal.songId) return state;
       return {
         ...state,
+        everyoneAnswered: false,
         currentSong: { ...state.currentSong, revealed: true },
         reveal: action.reveal,
         scoreboard: action.reveal.scoreboard,

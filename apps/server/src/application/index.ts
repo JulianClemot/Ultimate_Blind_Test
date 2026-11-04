@@ -2,6 +2,7 @@ export * from './errors';
 export type * from './ports/in';
 export type * from './ports/out';
 export * from './use-cases/AttachHost';
+export * from './use-cases/AutoRevealSong';
 export * from './use-cases/CheckPlaylist';
 export * from './use-cases/CreateGameDesign';
 export * from './use-cases/DeleteGameDesign';

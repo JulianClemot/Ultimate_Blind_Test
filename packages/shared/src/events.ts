@@ -1,4 +1,5 @@
 import type {
+  AllAnsweredDto,
   AnswerDto,
   ErrorDto,
   GameRecapDto,
@@ -47,6 +48,8 @@ export interface ServerToClientEvents {
   'answer:received': (answer: AnswerDto) => void;
   /** To hosts and to the player who sent the answer. */
   'answer:judged': (answer: AnswerDto) => void;
+  /** To everyone: all players answered, the server reveals the song in a couple of seconds. */
+  'song:all-answered': (payload: AllAnsweredDto) => void;
   /** To everyone. */
   'song:revealed': (reveal: RevealDto) => void;
   /** To everyone: scores of revealed songs changed after a correction. */

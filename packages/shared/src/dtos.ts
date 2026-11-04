@@ -123,6 +123,11 @@ export interface RevealDto {
   readonly scoreboard: readonly ScoreDto[];
 }
 
+/** Every player answered `songId`: the reveal follows after a short pause. */
+export interface AllAnsweredDto {
+  readonly songId: string;
+}
+
 export interface VerdictDto {
   readonly title: boolean;
   readonly artist: boolean;
@@ -208,6 +213,8 @@ export interface GameSnapshotDto {
   readonly answers: readonly AnswerDto[];
   /** Scores of revealed songs, like the players see them. */
   readonly scoreboard: readonly ScoreDto[];
+  /** True while the song is open and every player answered it: the reveal is about to happen. */
+  readonly everyoneAnswered: boolean;
   /** False when the next action finishes the game. */
   readonly hasNextSong: boolean;
   /** Null until the game is finished. */
@@ -231,8 +238,10 @@ export interface PlayerSessionDto {
   readonly rounds: readonly RoundSummaryDto[];
   readonly currentSong: SongDto | null;
   readonly reveal: RevealDto | null;
-  /** The player's own answers to the current song. */
+  /** The player's own answer to the current song (a single guess per song). */
   readonly myAnswers: readonly AnswerDto[];
+  /** True while the song is open and every player answered it: the reveal is about to happen. */
+  readonly everyoneAnswered: boolean;
   /** Scores of revealed songs only. */
   readonly scoreboard: readonly ScoreDto[];
   /** Null until the game is finished. */

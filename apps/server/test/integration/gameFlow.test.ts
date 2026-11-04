@@ -247,6 +247,52 @@ describe('blind test (HTTP + Socket.IO)', () => {
     });
   });
 
+  it('reveals the song by itself, after a pause, once every player answered', async () => {
+    const { party, host } = await launchParty([round('42', 'classic')]);
+    const join = async (playerName: string) => {
+      const socket = await openSocket();
+      const joined = await socket.emitWithAck('player:join', { code: party.code, playerName });
+      if (!joined.ok) throw new Error(joined.error.message);
+      return socket;
+    };
+    const alice = await join('Alice');
+    const bob = await join('Bob');
+    const next = await host.emitWithAck('song:next');
+    if (!next.ok || next.data.kind !== 'song') throw new Error('expected a song');
+
+    const allAnswered = [alice, bob, host].map((socket) => nextEvent(socket, 'song:all-answered'));
+    const revealedForAlice = nextEvent(alice, 'song:revealed');
+    const send = (socket: typeof alice, text: string) =>
+      socket.emitWithAck('answer:submit', { text, clientSentAt: Date.now() });
+
+    // One guess only, and nothing happens while somebody is still thinking.
+    expect(await send(alice, 'no idea')).toMatchObject({ ok: true });
+    expect(await send(alice, 'second try')).toMatchObject({
+      ok: false,
+      error: { code: 'ALREADY_ANSWERED' },
+    });
+    const early = Promise.race([
+      allAnswered[0],
+      new Promise((resolve) => setTimeout(() => resolve('quiet'), 150)),
+    ]);
+    expect(await early).toBe('quiet');
+
+    const lastAnswerAt = Date.now();
+    expect(await send(bob, 'daft punk one more time')).toMatchObject({ ok: true });
+    for (const event of allAnswered) expect(await event).toEqual({ songId: next.data.song.id });
+
+    // Everyone is told first, then the reveal follows without the host doing anything.
+    const reveal = await revealedForAlice;
+    expect(Date.now() - lastAnswerAt).toBeGreaterThanOrEqual(1_900);
+    expect(reveal).toMatchObject({
+      songId: next.data.song.id,
+      title: 'One More Time',
+      scoreboard: expect.arrayContaining([
+        expect.objectContaining({ playerName: 'Bob', points: 2 }),
+      ]) as unknown,
+    });
+  }, 10_000);
+
   it('plays a whole party: rounds, checked answers, corrections, reveals and final scores', async () => {
     const { party, host } = await launchParty([round('42', 'classic'), round('7', 'everyone')]);
 

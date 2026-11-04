@@ -37,6 +37,10 @@ export class SocketIoGameEventPublisher implements GameEventPublisher {
       .emit('answer:judged', toAnswerDto(game, answer));
   }
 
+  allAnswered(game: Game, song: Song): void {
+    this.io.to(rooms.game(game.id)).emit('song:all-answered', { songId: song.id });
+  }
+
   songRevealed(game: Game, song: Song): void {
     this.io.to(rooms.game(game.id)).emit('song:revealed', toRevealDto(game, song));
   }

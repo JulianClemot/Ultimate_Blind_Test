@@ -71,6 +71,7 @@ const HostGame = ({ session }: { session: HostSession }) => {
           reveal={game.reveal}
           roundCount={game.rounds.length}
           hasNextSong={game.hasNextSong}
+          everyoneAnswered={game.everyoneAnswered}
           pending={nextSong.isPending || revealSong.isPending}
           onNext={() => nextSong.mutate()}
           onReveal={() => revealSong.mutate()}

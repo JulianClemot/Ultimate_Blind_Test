@@ -12,7 +12,15 @@ describe('<SongPanel />', () => {
   it('offers to play the first song', async () => {
     const props = handlers();
     render(
-      <SongPanel song={null} reveal={null} roundCount={2} hasNextSong pending={false} {...props} />,
+      <SongPanel
+        song={null}
+        reveal={null}
+        roundCount={2}
+        hasNextSong
+        everyoneAnswered={false}
+        pending={false}
+        {...props}
+      />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Play the first song' }));
     expect(props.onNext).toHaveBeenCalled();
@@ -26,6 +34,7 @@ describe('<SongPanel />', () => {
         reveal={null}
         roundCount={2}
         hasNextSong
+        everyoneAnswered={false}
         pending={false}
         {...handlers()}
       />,
@@ -44,6 +53,7 @@ describe('<SongPanel />', () => {
         reveal={null}
         roundCount={2}
         hasNextSong
+        everyoneAnswered={false}
         pending={false}
         {...handlers()}
       />,
@@ -60,15 +70,39 @@ describe('<SongPanel />', () => {
         reveal={null}
         roundCount={2}
         hasNextSong
+        everyoneAnswered={false}
         pending={false}
         {...props}
       />,
     );
     rerender(
-      <SongPanel song={hostSong()} reveal={null} roundCount={2} hasNextSong pending {...props} />,
+      <SongPanel
+        song={hostSong()}
+        reveal={null}
+        roundCount={2}
+        hasNextSong
+        everyoneAnswered={false}
+        pending
+        {...props}
+      />,
     );
     expect(props.onReveal).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
+  });
+
+  it('tells the host the reveal is coming once everyone answered', () => {
+    render(
+      <SongPanel
+        song={hostSong({ startedAt: Date.now(), answerTimeSec: 30 })}
+        reveal={null}
+        roundCount={2}
+        hasNextSong
+        everyoneAnswered
+        pending={false}
+        {...handlers()}
+      />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('Everyone answered');
   });
 
   it('shows the answer after the reveal and the final step on the last song', () => {
@@ -78,6 +112,7 @@ describe('<SongPanel />', () => {
         reveal={{ songId: 's1', title: 'One More Time', artist: 'Daft Punk', scoreboard: [] }}
         roundCount={2}
         hasNextSong={false}
+        everyoneAnswered={false}
         pending={false}
         {...handlers()}
       />,

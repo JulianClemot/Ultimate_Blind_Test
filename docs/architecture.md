@@ -28,12 +28,12 @@ playlist); players send **answers**, checked automatically and correctable by th
 
 ### Layers (server)
 
-| Layer                | Contains                                                                                                                                                                                                                         | May import                         |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `domain/`            | `design/` (`GameDesign`, `RoundPlan`, `RoundRules` + presets), `game/` (`Game` root, `Round`, `Song`, `Answer`, `scoring`), `music/` (`PlaylistId`, `Track`, `answerMatching`), `Result`                                         | nothing                            |
-| `application/`       | one class per use case; **ports/in** (what adapters may call) and **ports/out** (`GameRepository`, `GameDesignRepository`, `MusicCatalog`, `Clock`, `IdGenerator`, `RandomGenerator`, `GameCodeGenerator`, `GameEventPublisher`) | `domain`                           |
-| `infrastructure/`    | primary adapters (HTTP, sockets), secondary adapters (SQLite design repo, in-memory game repo, Deezer catalog, system clock, Socket.IO publisher), DTO mappers                                                                   | `application`, `domain`, libraries |
-| `compositionRoot.ts` | wires concrete adapters into use cases (manual DI)                                                                                                                                                                               | everything                         |
+| Layer                | Contains                                                                                                                                                                                                                                      | May import                         |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `domain/`            | `design/` (`GameDesign`, `RoundPlan`, `RoundRules` + presets), `game/` (`Game` root, `Round`, `Song`, `Answer`, `scoring`), `music/` (`PlaylistId`, `Track`, `answerMatching`), `Result`                                                      | nothing                            |
+| `application/`       | one class per use case; **ports/in** (what adapters may call) and **ports/out** (`GameRepository`, `GameDesignRepository`, `MusicCatalog`, `Clock`, `IdGenerator`, `RandomGenerator`, `GameCodeGenerator`, `GameEventPublisher`, `Scheduler`) | `domain`                           |
+| `infrastructure/`    | primary adapters (HTTP, sockets), secondary adapters (SQLite design repo, in-memory game repo, Deezer catalog, system clock, Socket.IO publisher), DTO mappers                                                                                | `application`, `domain`, libraries |
+| `compositionRoot.ts` | wires concrete adapters into use cases (manual DI)                                                                                                                                                                                            | everything                         |
 
 These rules are enforced by `pnpm depcruise` (`.dependency-cruiser.cjs`) in CI.
 
@@ -57,11 +57,16 @@ These rules are enforced by `pnpm depcruise` (`.dependency-cruiser.cjs`) in CI.
 - Commands use **acks** (request/response with `{ ok, data | error }`): `song:next`, `song:reveal`,
   `answer:judge`, `game:finish`, `answer:submit`. Server pushes use events (`song:started` to
   players, `host:song-started` with the preview to hosts, `answer:received`, `answer:judged`,
-  `song:revealed`, `scoreboard:updated`, `game:finished`, `game:recap`). Contracts live in `packages/shared/src/events.ts`.
+  `song:all-answered`, `song:revealed`, `scoreboard:updated`, `game:finished`, `game:recap`). Contracts live in `packages/shared/src/events.ts`.
 - **Recap**: once finished, `Game.recap()` (pure, `domain/game/recap.ts`) derives standings, awards
   and a per-song replay from the answers. It is pushed with `game:recap` (again after a late host
   correction) and carried by `GameSnapshotDto.recap` / `PlayerSessionDto.recap`. It never contains
   answer texts. Spec: `docs/specs/game-recap.md`.
+- **One guess, auto-reveal**: a player has a single answer per song (`ALREADY_ANSWERED` after that).
+  When the last player answers, `SubmitAnswer` publishes `song:all-answered` and schedules
+  (`Scheduler` port, 2 s) the `AutoRevealSong` use case, which reveals that exact song unless the
+  host already did. `everyoneAnswered` in the snapshot/session DTOs covers refreshes in the window.
+  Players who never connect still count, so the host's "Reveal now" and the timer remain the fallbacks.
 - **Secrecy**: players never get the preview URL; title and artist leave the server only at the
   reveal (the host does not know the answer either). Players only see scores of revealed songs.
 - **The server clock is authoritative.** `SubmitAnswer` reads `Clock.now()` _first_, before any I/O.

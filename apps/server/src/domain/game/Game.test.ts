@@ -162,18 +162,25 @@ describe('Game', () => {
       });
     });
 
-    it('lets players try again until they found everything', () => {
-      const song = unwrap(startSong());
-      expect(unwrap(answer('p1', T0 + 1, 'no idea')).verdict).toEqual({
-        title: false,
-        artist: false,
-      });
-      unwrap(answer('p1', T0 + 2, song.track.title));
-      unwrap(answer('p1', T0 + 3, song.track.artist));
-      expect(answer('p1', T0 + 4, 'again')).toMatchObject({
+    it('gives each player a single guess per song', () => {
+      unwrap(startSong());
+      unwrap(answer('p1', T0 + 1, 'no idea'));
+      expect(answer('p1', T0 + 2, 'second try')).toMatchObject({
         ok: false,
-        error: { code: 'ALREADY_FOUND' },
+        error: { code: 'ALREADY_ANSWERED' },
       });
+      expect(answer('p2', T0 + 3, 'my turn')).toMatchObject({ ok: true });
+    });
+
+    it('knows when everyone has answered the open song', () => {
+      expect(game.everyoneHasAnswered()).toBe(false);
+      unwrap(startSong());
+      unwrap(answer('p1', T0 + 1, 'x'));
+      expect(game.everyoneHasAnswered()).toBe(false);
+      unwrap(answer('p2', T0 + 2, 'y'));
+      expect(game.everyoneHasAnswered()).toBe(true);
+      unwrap(game.revealSong(T0 + 3));
+      expect(game.everyoneHasAnswered()).toBe(false);
     });
 
     it('closes answers at the end of the answer time and once revealed', () => {
@@ -184,15 +191,6 @@ describe('Game', () => {
       expect(answer('p2', T0 + 11, 'x')).toMatchObject({
         ok: false,
         error: { code: 'SONG_CLOSED' },
-      });
-    });
-
-    it('caps the number of attempts', () => {
-      unwrap(startSong());
-      for (let i = 0; i < 10; i++) unwrap(answer('p1', T0 + i, `guess ${i}`));
-      expect(answer('p1', T0 + 20, 'one more')).toMatchObject({
-        ok: false,
-        error: { code: 'TOO_MANY_ATTEMPTS' },
       });
     });
 

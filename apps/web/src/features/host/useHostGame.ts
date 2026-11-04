@@ -28,6 +28,7 @@ export const useHostGame = (session: HostSession) => {
   useSocketEvent('host:song-started', (song) => dispatch({ type: 'songStarted', song }));
   useSocketEvent('answer:received', (answer) => dispatch({ type: 'answerReceived', answer }));
   useSocketEvent('answer:judged', (answer) => dispatch({ type: 'answerJudged', answer }));
+  useSocketEvent('song:all-answered', ({ songId }) => dispatch({ type: 'allAnswered', songId }));
   useSocketEvent('song:revealed', (reveal) => dispatch({ type: 'songRevealed', reveal }));
   useSocketEvent('scoreboard:updated', (scoreboard) =>
     dispatch({ type: 'scoreboardUpdated', scoreboard }),

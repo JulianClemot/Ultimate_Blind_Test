@@ -7,6 +7,8 @@ export interface GameEventPublisher {
   answerReceived(game: Game, answer: Answer): void;
   /** The host corrected an answer: tell the host and the player who sent it. */
   answerJudged(game: Game, answer: Answer): void;
+  /** Every player answered the song: the reveal follows shortly. */
+  allAnswered(game: Game, song: Song): void;
   songRevealed(game: Game, song: Song): void;
   /** Scores of revealed songs changed (correction after a reveal). */
   scoreboardUpdated(game: Game): void;

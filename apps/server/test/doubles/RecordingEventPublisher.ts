@@ -6,6 +6,7 @@ type RecordedEvent =
   | { type: 'songStarted'; gameId: string; song: Song }
   | { type: 'answerReceived'; gameId: string; answer: Answer }
   | { type: 'answerJudged'; gameId: string; answer: Answer }
+  | { type: 'allAnswered'; gameId: string; song: Song }
   | { type: 'songRevealed'; gameId: string; song: Song }
   | { type: 'scoreboardUpdated'; gameId: string }
   | { type: 'gameFinished'; gameId: string };
@@ -31,6 +32,10 @@ export class RecordingEventPublisher implements GameEventPublisher {
 
   answerJudged(game: Game, answer: Answer): void {
     this.events.push({ type: 'answerJudged', gameId: game.id, answer });
+  }
+
+  allAnswered(game: Game, song: Song): void {
+    this.events.push({ type: 'allAnswered', gameId: game.id, song });
   }
 
   songRevealed(game: Game, song: Song): void {

@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 
 import {
   AttachHost,
+  AutoRevealSong,
   CheckPlaylist,
   CreateGameDesign,
   DeleteGameDesign,
@@ -33,6 +34,7 @@ import { InMemoryGameRepository } from './infrastructure/secondary/persistence/I
 import { SqliteGameDesignRepository } from './infrastructure/secondary/persistence/SqliteGameDesignRepository';
 import { CryptoRandomGenerator } from './infrastructure/secondary/random/CryptoRandomGenerator';
 import { SystemClock } from './infrastructure/secondary/time/SystemClock';
+import { SystemScheduler } from './infrastructure/secondary/time/SystemScheduler';
 
 export interface AppServer {
   readonly http: FastifyInstance;
@@ -63,6 +65,10 @@ export const createAppServer = async (config: AppConfig): Promise<AppServer> => 
   const events = new SocketIoGameEventPublisher(io);
   const catalog = new DeezerMusicCatalog(config.DEEZER_API_URL);
   const random = new CryptoRandomGenerator();
+  const scheduler = new SystemScheduler((error) =>
+    http.log.error({ err: error }, 'scheduled task failed'),
+  );
+  const autoRevealSong = new AutoRevealSong(games, clock, events);
 
   const useCases = {
     createGameDesign: new CreateGameDesign(designs, ids, clock),
@@ -78,7 +84,7 @@ export const createAppServer = async (config: AppConfig): Promise<AppServer> => 
     revealSong: new RevealSong(games, clock, events),
     judgeAnswer: new JudgeAnswer(games, events),
     finishGame: new FinishGame(games, events),
-    submitAnswer: new SubmitAnswer(games, ids, clock, events),
+    submitAnswer: new SubmitAnswer(games, ids, clock, events, scheduler, autoRevealSong),
   };
 
   registerHealthRoutes(http);

@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useSessionStore } from '@/shared/session/sessionStore';
-import { gameRecap, playerSession } from '@/test/fixtures';
+import { answer, gameRecap, playerSession } from '@/test/fixtures';
 import { fakeGateway, renderWithRealtime } from '@/test/renderWithRealtime';
 
 import { PlayerGamePage } from './PlayerGamePage';
@@ -61,6 +61,46 @@ describe('<PlayerGamePage />', () => {
 
     expect(await screen.findByLabelText('Your answer')).toBeInTheDocument();
     expect(screen.queryByText(/How the game works/)).not.toBeInTheDocument();
+  });
+
+  describe('one guess per song', () => {
+    const openSong = {
+      id: 's1',
+      roundNumber: 1,
+      roundName: '',
+      roundType: 'classic' as const,
+      number: 1,
+      songCount: 2,
+      startedAt: Date.now(),
+      answerTimeSec: 30,
+      asksTitle: true,
+      asksArtist: true,
+      revealed: false,
+    };
+    const sent = answer({ songId: 's1' });
+
+    it('removes the form once the answer is sent', async () => {
+      renderPage(playerSession({ status: 'playing', currentSong: openSong, myAnswers: [sent] }));
+
+      expect(await screen.findByText('Answer sent! Waiting for the others…')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Your answer')).not.toBeInTheDocument();
+    });
+
+    it('tells the player when everyone answered', async () => {
+      renderPage(
+        playerSession({
+          status: 'playing',
+          currentSong: openSong,
+          myAnswers: [sent],
+          everyoneAnswered: true,
+        }),
+      );
+
+      expect(
+        await screen.findByText('Everyone answered — waiting for the result…'),
+      ).toBeInTheDocument();
+      expect(screen.queryByLabelText('Your answer')).not.toBeInTheDocument();
+    });
   });
 
   describe('when the game is over', () => {

@@ -119,3 +119,9 @@ export interface SubmitAnswerCommand {
   readonly clientSentAt: number;
 }
 export type SubmitAnswerUseCase = UseCase<SubmitAnswerCommand, GameAnswer>;
+
+export interface AutoRevealSongCommand {
+  readonly gameId: string;
+  readonly songId: string;
+}
+export type AutoRevealSongUseCase = UseCase<AutoRevealSongCommand, void>;

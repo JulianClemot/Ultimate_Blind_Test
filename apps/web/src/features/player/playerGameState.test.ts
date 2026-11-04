@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { answer, gameRecap, playerSession } from '@/test/fixtures';
 
-import { hasFoundEverything, playerGameReducer } from './playerGameState';
+import { playerGameReducer } from './playerGameState';
 
 const song: SongDto = {
   id: 's1',
@@ -43,6 +43,14 @@ describe('playerGameReducer', () => {
       answer: answer({ id: 'old', songId: 's0' }),
     });
     expect(state?.myAnswers.map((a) => a.id)).toEqual(['a1']);
+  });
+
+  it('flags that everyone answered, until the reveal or the next song', () => {
+    const flagged = playerGameReducer(playing, { type: 'allAnswered', songId: 's1' });
+    expect(flagged?.everyoneAnswered).toBe(true);
+    expect(playerGameReducer(playing, { type: 'allAnswered', songId: 'other' })).toBe(playing);
+    const next = playerGameReducer(flagged, { type: 'songStarted', song: { ...song, id: 's2' } });
+    expect(next?.everyoneAnswered).toBe(false);
   });
 
   it('applies host corrections', () => {
@@ -87,15 +95,5 @@ describe('playerGameReducer recap', () => {
     expect(playerGameReducer(withRecap, { type: 'recapReceived', recap: corrected })?.recap).toBe(
       corrected,
     );
-  });
-});
-
-describe('hasFoundEverything', () => {
-  it('needs every asked part, across attempts', () => {
-    const titleOnly = answer({ verdict: { title: true, artist: false } });
-    const artistOnly = answer({ id: 'a2', verdict: { title: false, artist: true } });
-    expect(hasFoundEverything(song, [titleOnly])).toBe(false);
-    expect(hasFoundEverything(song, [titleOnly, artistOnly])).toBe(true);
-    expect(hasFoundEverything({ ...song, asksArtist: false }, [titleOnly])).toBe(true);
   });
 });

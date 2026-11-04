@@ -15,10 +15,9 @@ export interface SubmitAnswerCommand {
   readonly clientSentAt: Timestamp;
 }
 
-/** One track played within a round. Players may answer several times until they find it. */
+/** One track played within a round. Each player has a single guess. */
 export class Song {
   static readonly MAX_ANSWER_LENGTH = 200;
-  static readonly MAX_ATTEMPTS = 10;
 
   private readonly answers: Answer[] = [];
   private revealTime: Timestamp | undefined;
@@ -58,12 +57,8 @@ export class Song {
         ),
       );
     }
-    const previous = this.answersOf(command.playerId);
-    if (previous.length >= Song.MAX_ATTEMPTS) {
-      return err(gameError('TOO_MANY_ATTEMPTS', `At most ${Song.MAX_ATTEMPTS} answers per song`));
-    }
-    if (this.hasFoundEverything(command.playerId)) {
-      return err(gameError('ALREADY_FOUND', 'You already found everything for this song'));
+    if (this.hasAnswered(command.playerId)) {
+      return err(gameError('ALREADY_ANSWERED', 'You already answered this song'));
     }
     const answer: Answer = {
       id: command.answerId,
@@ -109,10 +104,7 @@ export class Song {
     return scoreSong(this.rules, this.answers);
   }
 
-  private hasFoundEverything(playerId: string): boolean {
-    const found = this.answersOf(playerId);
-    return (['title', 'artist'] as const)
-      .filter((target) => this.rules.asks(target))
-      .every((target) => found.some((a) => a.verdict[target]));
+  hasAnswered(playerId: string): boolean {
+    return this.answers.some((a) => a.playerId === playerId);
   }
 }

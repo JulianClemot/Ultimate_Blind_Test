@@ -1,5 +1,6 @@
 export * from './FixedClock';
 export * from './InMemoryGameDesignRepository';
+export * from './ManualScheduler';
 export * from './RecordingEventPublisher';
 export * from './SequenceRandom';
 export * from './SequentialIdGenerator';

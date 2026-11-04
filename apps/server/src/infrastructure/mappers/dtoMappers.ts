@@ -157,6 +157,7 @@ export const toGameSnapshotDto = (game: Game): GameSnapshotDto => {
     reveal: revealOf(game),
     answers: song ? song.answersByArrival().map((a) => toAnswerDto(game, a)) : [],
     scoreboard: toPublicScoreboard(game),
+    everyoneAnswered: game.everyoneHasAnswered(),
     hasNextSong: game.upcomingRound !== undefined,
     recap: toGameRecapDto(game),
   };
@@ -174,6 +175,7 @@ export const toPlayerSessionDto = ({ game, player }: PlayerSession): PlayerSessi
     currentSong: song ? toSongDto(game, song) : null,
     reveal: revealOf(game),
     myAnswers: song ? song.answersOf(player.id).map((a) => toAnswerDto(game, a)) : [],
+    everyoneAnswered: game.everyoneHasAnswered(),
     scoreboard: toPublicScoreboard(game),
     recap: toGameRecapDto(game),
   };
