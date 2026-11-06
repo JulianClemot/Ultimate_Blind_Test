@@ -59,14 +59,22 @@ describe('useSongMusic', () => {
     expect(play).toHaveBeenCalledWith('https://cdn.test/1.mp3', { rate: 2, durationSec: 2 });
   });
 
-  it('replays an altered song normally at the reveal, but not a classic one', () => {
+  it('does not play anything at the reveal, whatever the round', () => {
     const flash = setup(song({ excerptSec: 4 }));
     flash.rerender({ current: song({ excerptSec: 4, revealed: true }) });
-    expect(flash.play).toHaveBeenLastCalledWith('https://cdn.test/1.mp3');
+    expect(flash.play).toHaveBeenCalledTimes(1);
 
     const classic = setup(song());
     classic.rerender({ current: song({ revealed: true }) });
     expect(classic.play).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets the host replay the full song manually once revealed', () => {
+    const { play, rerender, result } = setup(song({ excerptSec: 4 }));
+    rerender({ current: song({ excerptSec: 4, revealed: true }) });
+    act(() => result.current.replay());
+    expect(play).toHaveBeenCalledTimes(2);
+    expect(play).toHaveBeenLastCalledWith('https://cdn.test/1.mp3');
   });
 
   it('does not restart an already revealed song after a reconnection', () => {
