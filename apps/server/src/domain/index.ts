@@ -11,6 +11,7 @@ export * from './game/recap';
 export * from './game/Round';
 export * from './game/scoring';
 export * from './game/Song';
+export * from './game/Team';
 export * from './music/answerMatching';
 export * from './music/PlaylistId';
 export * from './music/Track';

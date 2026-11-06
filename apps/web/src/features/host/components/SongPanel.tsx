@@ -1,5 +1,5 @@
 import type { HostSongDto, RevealDto } from '@ubt/shared';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { ROUND_TYPE_INFO } from '@/shared/lib/roundTypes';
 import { formatCountdown } from '@/shared/lib/time';
@@ -18,6 +18,10 @@ interface SongPanelProps {
   readonly onReveal: () => void;
   readonly onReplay: () => void;
   readonly onStop: () => void;
+  /** Lobby only: shown right above the start button (the teams generator). */
+  readonly teamSetup?: ReactNode;
+  /** Why the next song cannot be played yet, e.g. teams still to generate. */
+  readonly nextBlockedReason?: string | null;
 }
 
 /** The answer, shown only while hovered or focused so the host can give oral clues. */
@@ -56,6 +60,8 @@ export const SongPanel = ({
   onReveal,
   onReplay,
   onStop,
+  teamSetup,
+  nextBlockedReason = null,
 }: SongPanelProps) => {
   const open = song !== null && !song.revealed;
   const remaining = useCountdown(open ? song.startedAt + song.answerTimeSec * 1000 : null);
@@ -111,13 +117,21 @@ export const SongPanel = ({
         </div>
       )}
 
+      {!song && teamSetup}
+
+      {!open && nextBlockedReason && (
+        <p role="status" className="text-sm text-warning">
+          {nextBlockedReason}
+        </p>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {open ? (
           <Button onClick={onReveal} disabled={pending}>
             Reveal now
           </Button>
         ) : (
-          <Button onClick={onNext} disabled={pending}>
+          <Button onClick={onNext} disabled={pending || nextBlockedReason !== null}>
             {nextLabel}
           </Button>
         )}

@@ -23,6 +23,10 @@ export const usePlayerGame = (session: PlayerSession) => {
       .catch(setRejoinError);
   });
 
+  useSocketEvent('teams:updated', (teams) => dispatch({ type: 'teamsUpdated', teams }));
+  useSocketEvent('team-scores:updated', (teamScoreboard) =>
+    dispatch({ type: 'teamScoresUpdated', teamScoreboard }),
+  );
   useSocketEvent('song:started', (song) => dispatch({ type: 'songStarted', song }));
   useSocketEvent('answer:judged', (answer) => dispatch({ type: 'answerJudged', answer }));
   useSocketEvent('song:all-answered', ({ songId }) => dispatch({ type: 'allAnswered', songId }));

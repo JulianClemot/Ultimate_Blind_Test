@@ -122,6 +122,22 @@ export const RoundEditor = ({ round, index, count, catalog, dispatch }: RoundEdi
         }
       />
 
+      <label className="flex items-start gap-3 text-sm">
+        <input
+          type="checkbox"
+          className="mt-1 size-4"
+          checked={round.rules.teamMode}
+          onChange={(e) => dispatch({ type: 'teamModeChanged', key, teamMode: e.target.checked })}
+        />
+        <span className="flex flex-col">
+          <span className="font-medium">Team mode</span>
+          <span className="text-xs text-muted-foreground">
+            Points scored in this round also count for the players' teams. You generate the teams in
+            the lobby, right before the first song.
+          </span>
+        </span>
+      </label>
+
       <details>
         <summary className="cursor-pointer text-sm font-medium">Rules</summary>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">

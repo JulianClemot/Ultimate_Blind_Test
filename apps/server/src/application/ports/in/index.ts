@@ -70,6 +70,11 @@ export interface HostCommand {
 }
 export type AttachHostUseCase = UseCase<HostCommand, Game>;
 
+export interface GenerateTeamsCommand extends HostCommand {
+  readonly teamCount: number;
+}
+export type GenerateTeamsUseCase = UseCase<GenerateTeamsCommand, Game>;
+
 export interface PlayerSession {
   readonly game: Game;
   readonly player: Player;

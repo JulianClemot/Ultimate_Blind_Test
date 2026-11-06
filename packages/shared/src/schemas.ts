@@ -22,6 +22,8 @@ export const roundRulesSchema = z.object({
   answerTimeSec: z.number(),
   excerptSec: z.number(),
   playbackRate: z.number(),
+  /** Absent from clients predating team mode. */
+  teamMode: z.boolean().default(false),
 });
 
 export const roundPlanPayloadSchema = z.object({
@@ -75,6 +77,12 @@ export const rejoinGamePayloadSchema = z.object({
   playerId: z.string().min(1),
 });
 export type RejoinGamePayload = z.infer<typeof rejoinGamePayloadSchema>;
+
+export const generateTeamsPayloadSchema = z.object({
+  /** Range (2–4) and player count are checked by the domain. */
+  teamCount: z.number(),
+});
+export type GenerateTeamsPayload = z.infer<typeof generateTeamsPayloadSchema>;
 
 export const submitAnswerPayloadSchema = z.object({
   text: z.string(),

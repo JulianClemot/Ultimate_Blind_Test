@@ -82,4 +82,13 @@ describe('describeRules', () => {
     expect(lines[1]).toBe('Find the title (1 point)');
     expect(lines.join(' ')).not.toMatch(/Bonus/);
   });
+
+  it('tells players when a round counts for their team', () => {
+    expect(describeRules(catalog.presets.classic)).not.toContain(
+      'Team round: the points also count for your team',
+    );
+    expect(describeRules({ ...catalog.presets.classic, teamMode: true })).toContain(
+      'Team round: the points also count for your team',
+    );
+  });
 });

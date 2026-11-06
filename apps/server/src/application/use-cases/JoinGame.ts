@@ -29,6 +29,7 @@ export class JoinGame implements JoinGameUseCase {
 
     await this.games.save(game);
     this.events.playerJoined(game, player.value);
+    if (game.hasTeams) this.events.teamsUpdated(game);
     return ok({ game, player: player.value });
   }
 }

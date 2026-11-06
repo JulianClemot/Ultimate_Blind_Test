@@ -1,4 +1,4 @@
-import type { GameRecapDto, PlayerSongResultDto, ScoreDto } from '@ubt/shared';
+import type { GameRecapDto, PlayerSongResultDto, ScoreDto, TeamScoreDto } from '@ubt/shared';
 import { useState } from 'react';
 
 import { cn } from '@/shared/lib/cn';
@@ -13,6 +13,7 @@ import { Button } from '@/shared/ui/button';
 import { Card, CardTitle } from '@/shared/ui/card';
 import { ErrorMessage } from '@/shared/ui/ErrorMessage';
 import { Scoreboard } from '@/shared/ui/Scoreboard';
+import { TeamScoreboard } from '@/shared/ui/TeamScoreboard';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 const PODIUM_HEIGHTS = ['h-32', 'h-24', 'h-16'];
@@ -155,14 +156,22 @@ interface RecapProps {
   readonly recap: GameRecapDto;
   /** The viewing player: highlights their row and words the share card for them. */
   readonly playerId?: string;
+  /** The viewing player's team: highlights its row. */
+  readonly teamId?: string;
 }
 
 /** End-of-game screen: podium, awards, full ranking, replay of the songs and a share button. */
-export const Recap = ({ recap, playerId }: RecapProps) => {
+export const Recap = ({ recap, playerId, teamId }: RecapProps) => {
   const mine = recap.standings.find((s) => s.playerId === playerId);
   const scores: ScoreDto[] = recap.standings.map((s) => ({
     playerId: s.playerId,
     playerName: s.playerName,
+    points: s.points,
+  }));
+
+  const teamScores: TeamScoreDto[] = recap.teamStandings.map((s) => ({
+    teamId: s.teamId,
+    teamName: s.teamName,
     points: s.points,
   }));
 
@@ -178,6 +187,13 @@ export const Recap = ({ recap, playerId }: RecapProps) => {
         )}
         <ShareButton recap={recap} {...(playerId && { playerId })} />
       </Card>
+
+      {teamScores.length > 0 && (
+        <Card>
+          <CardTitle>Team ranking</CardTitle>
+          <TeamScoreboard scores={teamScores} teamId={teamId ?? null} />
+        </Card>
+      )}
 
       {recap.superlatives.length > 0 && (
         <Card>

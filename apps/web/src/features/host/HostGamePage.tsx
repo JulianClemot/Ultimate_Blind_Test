@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 
 import { useSongMusic } from '@/shared/audio/useSongMusic';
+import { usesTeamMode } from '@/shared/lib/teams';
 import { useSessionStore, type HostSession } from '@/shared/session/sessionStore';
 import { Button } from '@/shared/ui/button';
 import { Card, CardTitle } from '@/shared/ui/card';
@@ -16,10 +17,12 @@ import { JoinQrCode } from './components/JoinQrCode';
 import { PlayerList } from './components/PlayerList';
 import { ScoreboardPanel } from './components/ScoreboardPanel';
 import { SongPanel } from './components/SongPanel';
+import { TeamsPanel } from './components/TeamsPanel';
 import { useHostGame } from './useHostGame';
 
 const HostGame = ({ session }: { session: HostSession }) => {
-  const { game, attachError, nextSong, revealSong, judgeAnswer, finishGame } = useHostGame(session);
+  const { game, attachError, nextSong, revealSong, judgeAnswer, generateTeams, finishGame } =
+    useHostGame(session);
   const [scoresOpen, setScoresOpen] = useState(false);
   const music = useSongMusic(game?.status === 'finished' ? null : (game?.currentSong ?? null));
 
@@ -38,6 +41,8 @@ const HostGame = ({ session }: { session: HostSession }) => {
   }
 
   const song = game.currentSong;
+  const teamRounds = usesTeamMode(game.rounds);
+  const teamsMissing = teamRounds && game.teams.length === 0;
   return (
     <>
       <Card className="flex items-center justify-between gap-4">
@@ -77,6 +82,20 @@ const HostGame = ({ session }: { session: HostSession }) => {
           onReveal={() => revealSong.mutate()}
           onReplay={music.replay}
           onStop={music.stop}
+          nextBlockedReason={
+            teamsMissing ? 'Generate the teams before playing the first song.' : null
+          }
+          teamSetup={
+            teamRounds && (
+              <TeamsPanel
+                players={game.players}
+                teams={game.teams}
+                pending={generateTeams.isPending}
+                error={generateTeams.error}
+                onGenerate={(teamCount) => generateTeams.mutate(teamCount)}
+              />
+            )
+          }
         />
         <ErrorMessage error={nextSong.error ?? revealSong.error ?? finishGame.error} />
       </Card>
@@ -115,6 +134,7 @@ const HostGame = ({ session }: { session: HostSession }) => {
       <ScoreboardPanel
         open={scoresOpen}
         scores={game.scoreboard}
+        teamScores={teamRounds ? game.teamScoreboard : []}
         onClose={() => setScoresOpen(false)}
       />
     </>

@@ -86,3 +86,21 @@ describe('<RoundEditor /> winners', () => {
     });
   });
 });
+
+describe('<RoundEditor /> team mode', () => {
+  it('is visible without opening the rules, and off by default', () => {
+    setup();
+    expect(screen.getByRole('checkbox', { name: /Team mode/ })).not.toBeChecked();
+  });
+
+  it('reflects a round saved in team mode', () => {
+    setup({ teamMode: true });
+    expect(screen.getByRole('checkbox', { name: /Team mode/ })).toBeChecked();
+  });
+
+  it('lets the host turn it on or off for this round', async () => {
+    const dispatch = setup();
+    await userEvent.click(screen.getByRole('checkbox', { name: /Team mode/ }));
+    expect(dispatch).toHaveBeenCalledWith({ type: 'teamModeChanged', key: 'r1', teamMode: true });
+  });
+});

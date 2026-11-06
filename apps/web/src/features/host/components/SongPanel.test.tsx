@@ -129,7 +129,13 @@ describe('<SongPanel />', () => {
     render(
       <SongPanel
         song={hostSong({ revealed: true })}
-        reveal={{ songId: 's1', title: 'One More Time', artist: 'Daft Punk', scoreboard: [] }}
+        reveal={{
+          songId: 's1',
+          title: 'One More Time',
+          artist: 'Daft Punk',
+          scoreboard: [],
+          teamScoreboard: [],
+        }}
         roundCount={2}
         hasNextSong={false}
         everyoneAnswered={false}

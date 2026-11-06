@@ -11,6 +11,14 @@ import type { PlayerName } from './PlayerName';
 import { buildRecap, type GameRecap } from './recap';
 import { Round } from './Round';
 import type { Song, SubmitAnswerCommand } from './Song';
+import {
+  balancedSplit,
+  generateTeamNames,
+  MAX_TEAMS,
+  type IntSource,
+  type Team,
+  type TeamScore,
+} from './Team';
 
 export type GameStatus = 'lobby' | 'playing' | 'finished';
 
@@ -41,6 +49,11 @@ export interface Score {
   readonly points: number;
 }
 
+export interface GenerateTeamsCommand {
+  readonly teamCount: number;
+  readonly random: IntSource;
+}
+
 /** Aggregate root of a party: every change to a running game goes through this class. */
 export class Game {
   static readonly MAX_PLAYERS = 50;
@@ -48,6 +61,8 @@ export class Game {
   private readonly players = new Map<string, Player>();
   private readonly rounds: readonly Round[];
   private finished = false;
+  private teams: readonly Team[] = [];
+  private readonly teamOfPlayer = new Map<string, string>();
 
   private constructor(
     readonly id: string,
@@ -120,13 +135,115 @@ export class Game {
     }
     const player: Player = { id: command.playerId, name: command.name, joinedAt: command.joinedAt };
     this.players.set(player.id, player);
+    // Teams already exist: a latecomer joins the smallest one to keep them even.
+    const smallest = this.smallestTeam();
+    if (smallest) this.teamOfPlayer.set(player.id, smallest.id);
     return ok(player);
+  }
+
+  // ── Teams ──────────────────────────────────────────────────────────────────
+
+  /** True when at least one round counts for the teams. */
+  get usesTeamMode(): boolean {
+    return this.rounds.some((round) => round.plan.rules.teamMode);
+  }
+
+  get hasTeams(): boolean {
+    return this.teams.length > 0;
+  }
+
+  listTeams(): readonly Team[] {
+    return this.teams;
+  }
+
+  teamOf(playerId: string): Team | undefined {
+    return this.teams.find((team) => team.id === this.teamOfPlayer.get(playerId));
+  }
+
+  membersOf(team: Team): readonly Player[] {
+    return this.listPlayers().filter((player) => this.teamOfPlayer.get(player.id) === team.id);
+  }
+
+  /**
+   * Shuffles every player into `teamCount` teams of (almost) equal size and names them.
+   * Can be redone as often as wanted, until the first song starts.
+   */
+  generateTeams(command: GenerateTeamsCommand): Result<readonly Team[], GameError> {
+    const { teamCount, random } = command;
+    if (this.status !== 'lobby') {
+      return err(gameError('TEAMS_LOCKED', 'Teams can only be generated before the first song'));
+    }
+    if (!Number.isInteger(teamCount) || teamCount < 2 || teamCount > MAX_TEAMS) {
+      return err(gameError('INVALID_TEAM_COUNT', `Choose between 2 and ${MAX_TEAMS} teams`));
+    }
+    if (this.players.size < teamCount) {
+      return err(
+        gameError('NOT_ENOUGH_PLAYERS', `${teamCount} teams need at least ${teamCount} players`),
+      );
+    }
+    const names = generateTeamNames(teamCount, random);
+    const groups = balancedSplit([...this.players.keys()], teamCount, random);
+    this.teams = names.map((name, index) => ({ id: `team-${index + 1}`, name }));
+    this.teamOfPlayer.clear();
+    groups.forEach((group, index) => {
+      const team = this.teams[index];
+      if (team) group.forEach((playerId) => this.teamOfPlayer.set(playerId, team.id));
+    });
+    return ok(this.teams);
+  }
+
+  /** A game with a team-mode round cannot start before its teams are generated. */
+  checkTeamsReady(): Result<void, GameError> {
+    if (this.usesTeamMode && !this.hasTeams) {
+      return err(gameError('TEAMS_REQUIRED', 'Generate the teams before playing a team round'));
+    }
+    return ok(undefined);
+  }
+
+  /**
+   * Points per team, best first: the sum of what its members scored in team-mode rounds.
+   * Like `scoreboard`, `revealedOnly` hides songs still running.
+   */
+  teamScoreboard({ revealedOnly }: { revealedOnly: boolean }): readonly TeamScore[] {
+    const totals = new Map<string, number>(this.teams.map((team) => [team.id, 0]));
+    for (const round of this.rounds) {
+      if (!round.plan.rules.teamMode) continue;
+      for (const song of round.listSongs()) {
+        if (revealedOnly && !song.isRevealed) continue;
+        for (const [playerId, points] of song.points()) {
+          const teamId = this.teamOfPlayer.get(playerId);
+          if (teamId !== undefined) totals.set(teamId, (totals.get(teamId) ?? 0) + points);
+        }
+      }
+    }
+    return this.teams
+      .map((team) => ({
+        team,
+        members: this.membersOf(team),
+        points: totals.get(team.id) ?? 0,
+      }))
+      .sort((a, b) => b.points - a.points || a.team.name.localeCompare(b.team.name));
+  }
+
+  private smallestTeam(): Team | undefined {
+    let smallest: Team | undefined;
+    let smallestSize = Infinity;
+    for (const team of this.teams) {
+      const size = this.membersOf(team).length;
+      if (size < smallestSize) {
+        smallest = team;
+        smallestSize = size;
+      }
+    }
+    return smallest;
   }
 
   /** Plays the next song of the upcoming round. The current song must be revealed first. */
   startSong(command: StartSongCommand): Result<Song, GameError> {
     const blocked = this.canMoveOn();
     if (!blocked.ok) return blocked;
+    const ready = this.checkTeamsReady();
+    if (!ready.ok) return ready;
     const round = this.upcomingRound;
     if (!round) return err(gameError('GAME_FINISHED', 'Every round has been played'));
     return ok(round.addSong(command.songId, command.startedAt, command.track));
@@ -193,7 +310,9 @@ export class Game {
 
   /** End-of-game recap; only available once the game is finished. */
   recap(): GameRecap | undefined {
-    return this.finished ? buildRecap(this.listPlayers(), this.rounds) : undefined;
+    if (!this.finished) return undefined;
+    const teamScores = this.usesTeamMode ? this.teamScoreboard({ revealedOnly: false }) : [];
+    return buildRecap(this.listPlayers(), this.rounds, teamScores);
   }
 
   /** Whether the game may leave the current song (to play another one or to finish). */

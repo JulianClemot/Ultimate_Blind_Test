@@ -67,6 +67,17 @@ These rules are enforced by `pnpm depcruise` (`.dependency-cruiser.cjs`) in CI.
   (`Scheduler` port, 2 s) the `AutoRevealSong` use case, which reveals that exact song unless the
   host already did. `everyoneAnswered` in the snapshot/session DTOs covers refreshes in the window.
   Players who never connect still count, so the host's "Reveal now" and the timer remain the fallbacks.
+- **Teams**: a round rule `teamMode` (off by default, stored with the design; designs saved before
+  it existed restore with it off) makes the points of that round count for teams too. Individual
+  scores always count; `Game.teamScoreboard()` only adds up team-mode rounds. In the lobby, the
+  host emits `teams:generate { teamCount }` (2–4, one player per team at least): `Game.generateTeams`
+  shuffles the players with the `RandomGenerator` port, deals them round-robin (sizes differ by at
+  most one) and draws distinct names ("The Funky Flamingos"). It can be redone until the first song
+  (`TEAMS_LOCKED` after). A game with a team-mode round refuses `song:next` with `TEAMS_REQUIRED`
+  until teams exist (checked before the Deezer call). Latecomers join the smallest team. Pushes:
+  `teams:updated` (generation or latecomer) and `team-scores:updated` (with `scoreboard:updated`);
+  `RevealDto.teamScoreboard`, `PlayerSessionDto.myTeamId/teams` and `GameRecapDto.teamStandings`
+  cover reveals, refreshes and the end. Team members are visible to all players (names are not secret).
 - **Secrecy**: players never get the preview URL; title and artist reach them only at the reveal.
   Hosts receive them with the song (`HostSongDto`) so they can give oral clues; the UI hides them
   until hovered/focused. Players only see scores of revealed songs.

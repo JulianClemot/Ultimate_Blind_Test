@@ -5,7 +5,13 @@ import { answer, gameRecap, hostSong, snapshot } from '@/test/fixtures';
 import { hostGameReducer, type HostGameState } from './hostGameState';
 
 const playing: HostGameState = snapshot({ status: 'playing', currentSong: hostSong() });
-const reveal = { songId: 's1', title: 'One More Time', artist: 'Daft Punk', scoreboard: [] };
+const reveal = {
+  songId: 's1',
+  title: 'One More Time',
+  artist: 'Daft Punk',
+  scoreboard: [],
+  teamScoreboard: [],
+};
 
 describe('hostGameReducer', () => {
   it('ignores events until attached', () => {
@@ -90,6 +96,35 @@ describe('hostGameReducer', () => {
     expect(
       hostGameReducer(playing, { type: 'songRevealed', reveal: { ...reveal, songId: 'other' } }),
     ).toBe(playing);
+  });
+
+  describe('teams', () => {
+    const teams = [
+      { id: 'team-1', name: 'The Funky Flamingos', players: [{ id: 'p1', name: 'Alice' }] },
+      { id: 'team-2', name: 'The Neon Llamas', players: [{ id: 'p2', name: 'Bob' }] },
+    ];
+
+    it('stores the generated teams, and replaces them when reshuffled', () => {
+      const first = hostGameReducer(snapshot(), { type: 'teamsUpdated', teams });
+      expect(first?.teams).toEqual(teams);
+      const reshuffled = hostGameReducer(first, { type: 'teamsUpdated', teams: [teams[0]!] });
+      expect(reshuffled?.teams).toEqual([teams[0]]);
+    });
+
+    it('takes the team scores from the reveal, then from corrections', () => {
+      const teamScoreboard = [{ teamId: 'team-1', teamName: 'The Funky Flamingos', points: 2 }];
+      const revealed = hostGameReducer(playing, {
+        type: 'songRevealed',
+        reveal: { ...reveal, teamScoreboard },
+      });
+      expect(revealed?.teamScoreboard).toEqual(teamScoreboard);
+
+      const corrected = [{ teamId: 'team-1', teamName: 'The Funky Flamingos', points: 0 }];
+      expect(
+        hostGameReducer(revealed, { type: 'teamScoresUpdated', teamScoreboard: corrected })
+          ?.teamScoreboard,
+      ).toEqual(corrected);
+    });
   });
 
   it('updates scores after a correction and at the end', () => {

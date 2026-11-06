@@ -6,8 +6,10 @@ import {
   toHostSongDto,
   toPlayerDto,
   toPublicScoreboard,
+  toPublicTeamScoreboard,
   toRevealDto,
   toSongDto,
+  toTeamDtos,
 } from '../../mappers/dtoMappers';
 import { rooms } from '../../realtime/rooms';
 import type { GameServer } from '../../realtime/types';
@@ -17,6 +19,10 @@ export class SocketIoGameEventPublisher implements GameEventPublisher {
 
   playerJoined(game: Game, player: Player): void {
     this.io.to(rooms.hosts(game.id)).emit('player:joined', toPlayerDto(player));
+  }
+
+  teamsUpdated(game: Game): void {
+    this.io.to(rooms.game(game.id)).emit('teams:updated', toTeamDtos(game));
   }
 
   songStarted(game: Game, song: Song): void {
@@ -47,6 +53,9 @@ export class SocketIoGameEventPublisher implements GameEventPublisher {
 
   scoreboardUpdated(game: Game): void {
     this.io.to(rooms.game(game.id)).emit('scoreboard:updated', toPublicScoreboard(game));
+    if (game.hasTeams) {
+      this.io.to(rooms.game(game.id)).emit('team-scores:updated', toPublicTeamScoreboard(game));
+    }
     // A correction after the end changes the awards and the replay too.
     if (game.status === 'finished') this.emitRecap(game);
   }

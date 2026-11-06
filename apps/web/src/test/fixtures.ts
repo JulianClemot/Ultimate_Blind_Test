@@ -20,6 +20,7 @@ const rules = (overrides: Partial<RoundRulesDto> = {}): RoundRulesDto => ({
   answerTimeSec: 30,
   excerptSec: 30,
   playbackRate: 1,
+  teamMode: false,
   ...overrides,
 });
 
@@ -105,6 +106,8 @@ export const snapshot = (overrides: Partial<GameSnapshotDto> = {}): GameSnapshot
   reveal: null,
   answers: [],
   scoreboard: [{ playerId: 'p1', playerName: 'Alice', points: 0 }],
+  teams: [],
+  teamScoreboard: [],
   everyoneAnswered: false,
   hasNextSong: true,
   recap: null,
@@ -117,12 +120,15 @@ export const playerSession = (overrides: Partial<PlayerSessionDto> = {}): Player
   name: 'Friday night',
   status: 'lobby',
   player: { id: 'p1', name: 'Alice' },
+  teams: [],
+  myTeamId: null,
   rounds: snapshot().rounds,
   currentSong: null,
   reveal: null,
   myAnswers: [],
   everyoneAnswered: false,
   scoreboard: [],
+  teamScoreboard: [],
   recap: null,
   ...overrides,
 });
@@ -136,6 +142,7 @@ export const gameRecap = (overrides: Partial<GameRecapDto> = {}): GameRecapDto =
     { rank: 2, playerId: 'p3', playerName: 'Chloé', points: 3 },
     { rank: 4, playerId: 'p4', playerName: 'Dan', points: 0 },
   ],
+  teamStandings: [],
   superlatives: [
     { kind: 'fastest-finger', playerId: 'p1', playerName: 'Alice', value: 2_345 },
     { kind: 'sniper', playerId: 'p1', playerName: 'Alice', value: 2 },

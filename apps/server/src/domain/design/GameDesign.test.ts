@@ -75,6 +75,17 @@ describe('GameDesign', () => {
     expect([restored?.winnerCount, restored?.rankStep]).toEqual([1, 0]);
   });
 
+  it('restores designs saved before team mode existed, with team mode off', () => {
+    const design = unwrap(newDesign());
+    unwrap(design.update({ name: 'Party', rounds: [plan('42')], updatedAt: 2_000 }));
+    const snapshot = structuredClone(design.toSnapshot());
+    const legacyRound = { ...snapshot.rounds[0]!, rules: { ...snapshot.rounds[0]!.rules } };
+    delete legacyRound.rules.teamMode;
+
+    const restored = GameDesign.restore({ ...snapshot, rounds: [legacyRound] });
+    expect(restored.rounds[0]?.rules.teamMode).toBe(false);
+  });
+
   it('survives a snapshot round trip', () => {
     const design = unwrap(newDesign());
     unwrap(design.update({ name: 'Party', rounds: [plan('42', 'everyone')], updatedAt: 2_000 }));

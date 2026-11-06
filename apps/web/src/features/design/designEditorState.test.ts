@@ -246,3 +246,28 @@ describe('roundWarnings / totalSongs', () => {
     expect(totalSongs(run(add('a'), add('b', 'flash')))).toBe(20);
   });
 });
+
+describe('team mode', () => {
+  it('is off for new rounds and can be toggled per round', () => {
+    const state = run({ type: 'loaded', design }, add('r2'));
+    expect(state.rounds.map((r) => r.rules.teamMode)).toEqual([false, false]);
+
+    const toggled = designEditorReducer(state, {
+      type: 'teamModeChanged',
+      key: 'r2',
+      teamMode: true,
+    });
+    expect(toggled.rounds.map((r) => r.rules.teamMode)).toEqual([false, true]);
+    expect(toggled.dirty).toBe(true);
+    expect(toUpdatePayload(toggled).rounds.map((r) => r.rules.teamMode)).toEqual([false, true]);
+  });
+
+  it('survives a change of round type, which otherwise resets the rules to the preset', () => {
+    const state = run(
+      { type: 'loaded', design },
+      { type: 'teamModeChanged', key: 'saved-0', teamMode: true },
+      { type: 'roundTypeChanged', key: 'saved-0', roundType: 'flash', catalog },
+    );
+    expect(state.rounds[0]?.rules).toEqual({ ...catalog.presets.flash, teamMode: true });
+  });
+});

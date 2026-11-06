@@ -464,6 +464,155 @@ describe('blind test (HTTP + Socket.IO)', () => {
     });
   });
 
+  describe('teams', () => {
+    const teamRound = (playlist: string): RoundPlanPayload => {
+      const base = round(playlist, 'classic');
+      return { ...base, rules: { ...base.rules, teamMode: true } };
+    };
+
+    const join = async (code: string, playerName: string) => {
+      const socket = await openSocket();
+      const joined = await socket.emitWithAck('player:join', { code, playerName });
+      if (!joined.ok) throw new Error(joined.error.message);
+      return { socket, session: joined.data };
+    };
+
+    it('keeps the team-mode rule of a round through the design API', async () => {
+      const { design, editToken } = (
+        await api<CreateGameDesignResponseDto>('POST', '/api/designs', { name: 'Party' })
+      ).body;
+      const saved = await api<GameDesignDto>(
+        'PUT',
+        `/api/designs/${design.id}`,
+        { name: 'Party', rounds: [teamRound('42'), round('7', 'classic')] },
+        editToken,
+      );
+      expect(saved.body.rounds.map((r) => r.rules.teamMode)).toEqual([true, false]);
+    });
+
+    it('assigns balanced teams before the party, then scores them on team rounds', async () => {
+      const { party, host } = await launchParty([teamRound('42')]);
+      const alice = await join(party.code, 'Alice');
+      const bob = await join(party.code, 'Bob');
+      const chloe = await join(party.code, 'Chloé');
+
+      // A team round cannot start before the teams exist.
+      expect(await host.emitWithAck('song:next')).toMatchObject({
+        ok: false,
+        error: { code: 'TEAMS_REQUIRED' },
+      });
+
+      const teamsForAlice = nextEvent(alice.socket, 'teams:updated');
+      const teamsForHost = nextEvent(host, 'teams:updated');
+      const generated = await host.emitWithAck('teams:generate', { teamCount: 2 });
+      if (!generated.ok) throw new Error(generated.error.message);
+      const teams = generated.data;
+
+      expect(teams).toHaveLength(2);
+      expect(teams.map((team) => team.players.length).sort()).toEqual([1, 2]);
+      expect(new Set(teams.map((team) => team.name)).size).toBe(2);
+      expect(teams.flatMap((team) => team.players.map((p) => p.id)).sort()).toEqual(
+        [alice, bob, chloe].map(({ session }) => session.player.id).sort(),
+      );
+      expect(await teamsForAlice).toEqual(teams);
+      expect(await teamsForHost).toEqual(teams);
+
+      // Players and a re-attaching host get their team and the roster back.
+      const resumed = await (
+        await openSocket()
+      ).emitWithAck('player:rejoin', { gameId: party.gameId, playerId: alice.session.player.id });
+      const aliceTeam = teams.find((team) =>
+        team.players.some((p) => p.id === alice.session.player.id),
+      );
+      expect(resumed).toMatchObject({ ok: true, data: { teams, myTeamId: aliceTeam?.id } });
+      const snapshot = await (
+        await openSocket()
+      ).emitWithAck('host:attach', { gameId: party.gameId, hostToken: party.hostToken });
+      expect(snapshot).toMatchObject({ ok: true, data: { teams } });
+
+      // The host can reshuffle until the party starts.
+      const reshuffled = await host.emitWithAck('teams:generate', { teamCount: 3 });
+      expect(reshuffled).toMatchObject({ ok: true });
+      expect(reshuffled.ok && reshuffled.data).toHaveLength(3);
+
+      // Alice finds the song: her team scores it when the song is revealed.
+      const next = await host.emitWithAck('song:next');
+      expect(next).toMatchObject({ ok: true, data: { kind: 'song' } });
+      await alice.socket.emitWithAck('answer:submit', {
+        text: 'daft punk one more time',
+        clientSentAt: Date.now(),
+      });
+      const revealed = await host.emitWithAck('song:reveal');
+      if (!revealed.ok) throw new Error(revealed.error.message);
+      const aliceNow = reshuffled.ok
+        ? reshuffled.data.find((team) => team.players.some((p) => p.id === alice.session.player.id))
+        : undefined;
+      expect(revealed.data.teamScoreboard[0]).toMatchObject({
+        teamId: aliceNow?.id,
+        points: 2,
+      });
+      expect(revealed.data.teamScoreboard).toHaveLength(3);
+
+      // Once the song started, the teams are frozen.
+      expect(await host.emitWithAck('teams:generate', { teamCount: 2 })).toMatchObject({
+        ok: false,
+        error: { code: 'TEAMS_LOCKED' },
+      });
+    });
+
+    it('puts a latecomer in the smallest team and tells the host', async () => {
+      const { party, host } = await launchParty([teamRound('42')]);
+      await join(party.code, 'Alice');
+      await join(party.code, 'Bob');
+      const generated = await host.emitWithAck('teams:generate', { teamCount: 2 });
+      if (!generated.ok) throw new Error(generated.error.message);
+      expect(generated.data.map((team) => team.players.length)).toEqual([1, 1]);
+
+      const updated = nextEvent(host, 'teams:updated');
+      const chloe = await join(party.code, 'Chloé');
+
+      const teams = await updated;
+      expect(teams.flatMap((team) => team.players.map((p) => p.id))).toContain(
+        chloe.session.player.id,
+      );
+      expect(teams.map((team) => team.players.length).sort()).toEqual([1, 2]);
+      expect(chloe.session.myTeamId).toBe(
+        teams.find((team) => team.players.some((p) => p.id === chloe.session.player.id))?.id,
+      );
+    });
+
+    it('refuses invalid team counts, too few players and non-host sockets', async () => {
+      const { party, host } = await launchParty([teamRound('42')]);
+      const alice = await join(party.code, 'Alice');
+
+      expect(await host.emitWithAck('teams:generate', { teamCount: 2 })).toMatchObject({
+        ok: false,
+        error: { code: 'NOT_ENOUGH_PLAYERS' },
+      });
+      await join(party.code, 'Bob');
+      expect(await host.emitWithAck('teams:generate', { teamCount: 1 })).toMatchObject({
+        ok: false,
+        error: { code: 'INVALID_TEAM_COUNT' },
+      });
+      expect(await host.emitWithAck('teams:generate', { teamCount: 'two' } as never)).toMatchObject(
+        {
+          ok: false,
+          error: { code: 'INVALID_PAYLOAD' },
+        },
+      );
+      // A player cannot shuffle the teams.
+      expect(await alice.socket.emitWithAck('teams:generate', { teamCount: 2 })).toMatchObject({
+        ok: false,
+        error: { code: 'NOT_IDENTIFIED' },
+      });
+    });
+
+    it('does not ask for teams when no round uses the team mode', async () => {
+      const { host } = await launchParty([round('42', 'classic')]);
+      expect(await host.emitWithAck('song:next')).toMatchObject({ ok: true });
+    });
+  });
+
   it('has no recap before the game is finished', async () => {
     const { party, host } = await launchParty([round('42', 'classic')]);
     await host.emitWithAck('song:next');

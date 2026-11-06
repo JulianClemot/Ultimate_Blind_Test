@@ -26,9 +26,16 @@ describe('RoundRules', () => {
     { playbackRate: 3 },
     { titlePoints: 0, artistPoints: 0 },
     { scoring: 'random' as 'first' },
+    { teamMode: 'yes' as unknown as boolean },
   ])('rejects %o', (override) => {
     const result = RoundRules.create({ ...ROUND_PRESETS.classic, ...override });
     expect(!result.ok && result.error.code).toBe('INVALID_ROUND_RULES');
+  });
+
+  it('is not played in team mode by default, but the host can turn it on', () => {
+    expect(RoundRules.preset('classic').teamMode).toBe(false);
+    const result = RoundRules.create({ ...ROUND_PRESETS.classic, teamMode: true });
+    expect(result.ok && result.value.toProps().teamMode).toBe(true);
   });
 
   it('keeps the number of winners the host chose', () => {

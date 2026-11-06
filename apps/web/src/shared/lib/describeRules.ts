@@ -49,6 +49,9 @@ export const describeRules = (rules: RoundRulesDto): string[] => {
         : `Points by place: ${pointsByPlace(asksTitle ? rules.titlePoints : rules.artistPoints, rules)}`,
     );
   }
+  if (rules.teamMode) {
+    lines.push('Team round: the points also count for your team');
+  }
   if (asksTitle && asksArtist && rules.bothBonus > 0) {
     lines.push(`Bonus: +${points(rules.bothBonus)} for finding both`);
   }

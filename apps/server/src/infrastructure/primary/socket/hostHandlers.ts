@@ -1,5 +1,6 @@
 import {
   attachHostPayloadSchema,
+  generateTeamsPayloadSchema,
   judgeAnswerPayloadSchema,
   type NextSongResponseDto,
 } from '@ubt/shared';
@@ -8,6 +9,7 @@ import type { FastifyBaseLogger } from 'fastify';
 import type {
   AttachHostUseCase,
   FinishGameUseCase,
+  GenerateTeamsUseCase,
   JudgeAnswerUseCase,
   NextSongResult,
   NextSongUseCase,
@@ -19,6 +21,7 @@ import {
   toHostSongDto,
   toPublicScoreboard,
   toRevealDto,
+  toTeamDtos,
 } from '../../mappers/dtoMappers';
 import { rooms } from '../../realtime/rooms';
 import type { GameSocket } from '../../realtime/types';
@@ -26,6 +29,7 @@ import { fromResult, notIdentified, parsePayload, respond } from './respond';
 
 export interface HostUseCases {
   readonly attachHost: AttachHostUseCase;
+  readonly generateTeams: GenerateTeamsUseCase;
   readonly nextSong: NextSongUseCase;
   readonly revealSong: RevealSongUseCase;
   readonly judgeAnswer: JudgeAnswerUseCase;
@@ -60,6 +64,18 @@ export const registerHostHandlers = (
         await socket.join([rooms.game(gameId), rooms.hosts(gameId)]);
       }
       return fromResult(result, toGameSnapshotDto);
+    }),
+  );
+
+  socket.on('teams:generate', (payload, ack) =>
+    respond(ack, logger, async () => {
+      const session = hostSession();
+      if (!session) return notIdentified();
+      const input = parsePayload(generateTeamsPayloadSchema, payload);
+      if (!input.ok) return input.response;
+
+      const result = await useCases.generateTeams.execute({ ...session, ...input.value });
+      return fromResult(result, toTeamDtos);
     }),
   );
 

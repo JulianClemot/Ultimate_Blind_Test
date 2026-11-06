@@ -124,4 +124,27 @@ describe('<Recap />', () => {
       expect(await screen.findByRole('alert')).toHaveTextContent('no canvas');
     });
   });
+
+  describe('team ranking', () => {
+    const teamStandings = [
+      { rank: 1, teamId: 'team-1', teamName: 'The Funky Flamingos', points: 7 },
+      { rank: 2, teamId: 'team-2', teamName: 'The Neon Llamas', points: 4 },
+    ];
+
+    it('is shown when rounds were played in team mode', () => {
+      render(<Recap recap={gameRecap({ teamStandings })} teamId="team-2" />);
+
+      const ranking = screen.getByRole('list', { name: 'Team scoreboard' });
+      expect(ranking).toHaveTextContent('1.The Funky Flamingos7 pts');
+      expect(ranking).toHaveTextContent('2.The Neon Llamas4 pts');
+      expect(within(ranking).getByText('The Neon Llamas').closest('li')).toHaveClass(
+        'font-semibold',
+      );
+    });
+
+    it('is left out otherwise', () => {
+      render(<Recap recap={gameRecap()} />);
+      expect(screen.queryByRole('list', { name: 'Team scoreboard' })).not.toBeInTheDocument();
+    });
+  });
 });

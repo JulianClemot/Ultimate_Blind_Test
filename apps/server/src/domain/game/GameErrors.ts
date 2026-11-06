@@ -17,7 +17,11 @@ export type GameErrorCode =
   | 'INVALID_ROUND_RULES'
   | 'INVALID_ROUND_NAME'
   | 'TOO_MANY_ROUNDS'
-  | 'EMPTY_DESIGN';
+  | 'EMPTY_DESIGN'
+  | 'INVALID_TEAM_COUNT'
+  | 'NOT_ENOUGH_PLAYERS'
+  | 'TEAMS_LOCKED'
+  | 'TEAMS_REQUIRED';
 
 export interface GameError {
   readonly code: GameErrorCode;

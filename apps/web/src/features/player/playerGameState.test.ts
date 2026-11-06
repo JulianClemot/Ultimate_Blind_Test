@@ -66,7 +66,7 @@ describe('playerGameReducer', () => {
     const scoreboard = [{ playerId: 'p1', playerName: 'Alice', points: 3 }];
     const revealed = playerGameReducer(playing, {
       type: 'songRevealed',
-      reveal: { songId: 's1', title: 'Take On Me', artist: 'a-ha', scoreboard },
+      reveal: { songId: 's1', title: 'Take On Me', artist: 'a-ha', scoreboard, teamScoreboard: [] },
     });
     expect(revealed).toMatchObject({
       currentSong: { revealed: true },
@@ -95,5 +95,68 @@ describe('playerGameReducer recap', () => {
     expect(playerGameReducer(withRecap, { type: 'recapReceived', recap: corrected })?.recap).toBe(
       corrected,
     );
+  });
+
+  describe('teams', () => {
+    const flamingos = {
+      id: 'team-1',
+      name: 'The Funky Flamingos',
+      players: [
+        { id: 'p1', name: 'Alice' },
+        { id: 'p2', name: 'Bob' },
+      ],
+    };
+    const llamas = {
+      id: 'team-2',
+      name: 'The Neon Llamas',
+      players: [{ id: 'p3', name: 'Chloé' }],
+    };
+
+    it("finds the player's own team when teams are drawn", () => {
+      const state = playerGameReducer(playerSession(), {
+        type: 'teamsUpdated',
+        teams: [llamas, flamingos],
+      });
+      expect(state).toMatchObject({ teams: [llamas, flamingos], myTeamId: 'team-1' });
+    });
+
+    it('follows the player to a new team when the host reshuffles', () => {
+      const drawn = playerGameReducer(playerSession(), {
+        type: 'teamsUpdated',
+        teams: [flamingos, llamas],
+      });
+      const reshuffled = playerGameReducer(drawn, {
+        type: 'teamsUpdated',
+        teams: [
+          { ...flamingos, players: [{ id: 'p2', name: 'Bob' }] },
+          {
+            ...llamas,
+            players: [
+              { id: 'p3', name: 'Chloé' },
+              { id: 'p1', name: 'Alice' },
+            ],
+          },
+        ],
+      });
+      expect(reshuffled?.myTeamId).toBe('team-2');
+    });
+
+    it('keeps no team when the player is in none', () => {
+      const state = playerGameReducer(playerSession(), { type: 'teamsUpdated', teams: [llamas] });
+      expect(state?.myTeamId).toBeNull();
+    });
+
+    it('takes the team scores from the reveal and from corrections', () => {
+      const teamScoreboard = [{ teamId: 'team-1', teamName: 'The Funky Flamingos', points: 3 }];
+      const revealed = playerGameReducer(playing, {
+        type: 'songRevealed',
+        reveal: { songId: 's1', title: 'T', artist: 'A', scoreboard: [], teamScoreboard },
+      });
+      expect(revealed?.teamScoreboard).toEqual(teamScoreboard);
+      expect(
+        playerGameReducer(revealed, { type: 'teamScoresUpdated', teamScoreboard: [] })
+          ?.teamScoreboard,
+      ).toEqual([]);
+    });
   });
 });

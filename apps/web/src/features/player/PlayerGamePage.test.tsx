@@ -125,4 +125,64 @@ describe('<PlayerGamePage />', () => {
       expect(screen.queryByRole('button', { name: /share/i })).not.toBeInTheDocument();
     });
   });
+
+  describe('teams', () => {
+    const teams = [
+      {
+        id: 'team-1',
+        name: 'The Funky Flamingos',
+        players: [
+          { id: 'p1', name: 'Alice' },
+          { id: 'p2', name: 'Bob' },
+          { id: 'p3', name: 'Chloé' },
+        ],
+      },
+      { id: 'team-2', name: 'The Neon Llamas', players: [{ id: 'p4', name: 'Dan' }] },
+    ];
+    const teamRounds = () =>
+      playerSession().rounds.map((round) => ({
+        ...round,
+        rules: { ...round.rules, teamMode: true },
+      }));
+
+    it('tells the player their team and their teammates', async () => {
+      renderPage(playerSession({ rounds: teamRounds(), teams, myTeamId: 'team-1' }));
+
+      const mine = await screen.findByLabelText('Your team');
+      expect(mine).toHaveTextContent('Your team: The Funky Flamingos');
+      expect(mine).toHaveTextContent('with Bob, Chloé');
+      expect(mine).not.toHaveTextContent('with Alice');
+    });
+
+    it('says the teams are coming while the host has not drawn them', async () => {
+      renderPage(playerSession({ rounds: teamRounds() }));
+      expect(await screen.findByText('The host will draw the teams soon.')).toBeVisible();
+      expect(screen.queryByLabelText('Your team')).not.toBeInTheDocument();
+    });
+
+    it('says nothing about teams when no round uses them', async () => {
+      renderPage(playerSession());
+      await screen.findByText('Waiting for the host to play the first song…');
+      expect(screen.queryByText(/draw the teams/)).not.toBeInTheDocument();
+    });
+
+    it('ranks the teams next to the players once points are scored', async () => {
+      renderPage(
+        playerSession({
+          rounds: teamRounds(),
+          teams,
+          myTeamId: 'team-2',
+          scoreboard: [{ playerId: 'p1', playerName: 'Alice', points: 2 }],
+          teamScoreboard: [
+            { teamId: 'team-1', teamName: 'The Funky Flamingos', points: 2 },
+            { teamId: 'team-2', teamName: 'The Neon Llamas', points: 0 },
+          ],
+        }),
+      );
+
+      const board = await screen.findByRole('list', { name: 'Team scoreboard' });
+      expect(board).toHaveTextContent('1.The Funky Flamingos2 pts');
+      expect(board).toHaveTextContent('2.The Neon Llamas0 pts');
+    });
+  });
 });

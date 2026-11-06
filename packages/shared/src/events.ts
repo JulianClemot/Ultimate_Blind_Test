@@ -11,9 +11,12 @@ import type {
   RevealDto,
   ScoreDto,
   SongDto,
+  TeamDto,
+  TeamScoreDto,
 } from './dtos';
 import type {
   AttachHostPayload,
+  GenerateTeamsPayload,
   JoinGamePayload,
   JudgeAnswerPayload,
   RejoinGamePayload,
@@ -30,6 +33,8 @@ export interface ClientToServerEvents {
   'song:next': (ack: Ack<NextSongResponseDto>) => void;
   'song:reveal': (ack: Ack<RevealDto>) => void;
   'answer:judge': (payload: JudgeAnswerPayload, ack: Ack<AnswerDto>) => void;
+  /** Lobby only: (re)shuffles every player into balanced, freshly named teams. */
+  'teams:generate': (payload: GenerateTeamsPayload, ack: Ack<readonly TeamDto[]>) => void;
   'game:finish': (ack: Ack<readonly ScoreDto[]>) => void;
   'player:join': (payload: JoinGamePayload, ack: Ack<PlayerSessionDto>) => void;
   'player:rejoin': (payload: RejoinGamePayload, ack: Ack<PlayerSessionDto>) => void;
@@ -54,6 +59,10 @@ export interface ServerToClientEvents {
   'song:revealed': (reveal: RevealDto) => void;
   /** To everyone: scores of revealed songs changed after a correction. */
   'scoreboard:updated': (scoreboard: readonly ScoreDto[]) => void;
+  /** To everyone: teams were generated, or a latecomer joined one. */
+  'teams:updated': (teams: readonly TeamDto[]) => void;
+  /** To everyone, with `scoreboard:updated`: team points changed after a correction. */
+  'team-scores:updated': (scores: readonly TeamScoreDto[]) => void;
   /** To everyone: final scores. */
   'game:finished': (scoreboard: readonly ScoreDto[]) => void;
   /** To everyone, right after `game:finished` (and again if the host corrects an answer later). */

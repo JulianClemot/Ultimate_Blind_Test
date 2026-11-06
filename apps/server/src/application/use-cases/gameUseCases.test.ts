@@ -19,6 +19,7 @@ import { AttachHost } from './AttachHost';
 import { AutoRevealSong } from './AutoRevealSong';
 import { CreateGameDesign } from './CreateGameDesign';
 import { FinishGame } from './FinishGame';
+import { GenerateTeams } from './GenerateTeams';
 import { JoinGame } from './JoinGame';
 import { JudgeAnswer } from './JudgeAnswer';
 import { LaunchGame } from './LaunchGame';
@@ -356,6 +357,85 @@ describe('party use cases', () => {
       unwrap(await new FinishGame(games, events).execute(host));
       expect(game.status).toBe('finished');
       expect(events.types().at(-1)).toBe('gameFinished');
+    });
+  });
+  describe('GenerateTeams', () => {
+    const teamRound = (playlist: string, songCount = 1): RoundPlanInput => {
+      const round = roundInput(playlist, 'classic', songCount);
+      return { ...round, rules: { ...round.rules, teamMode: true } };
+    };
+    const generate = (host: { gameId: string; hostToken: string }, teamCount = 2) =>
+      new GenerateTeams(games, random, events).execute({ ...host, teamCount });
+
+    it('shuffles the players into balanced teams and tells everybody', async () => {
+      const { game, host } = await launch([teamRound('42')]);
+      for (const name of ['Alice', 'Bob', 'Chloé', 'Dan', 'Eve']) unwrap(await join(name));
+
+      unwrap(await generate(host));
+
+      expect(
+        game
+          .listTeams()
+          .map((team) => game.membersOf(team).length)
+          .sort(),
+      ).toEqual([2, 3]);
+      expect(events.types().at(-1)).toBe('teamsUpdated');
+    });
+
+    it('is reserved to the host', async () => {
+      const { game } = await launch([teamRound('42')]);
+      unwrap(await join('Alice'));
+      unwrap(await join('Bob'));
+      const result = await generate({ gameId: game.id, hostToken: 'guess' });
+      expect(!result.ok && result.error.code).toBe('NOT_HOST');
+      expect(game.hasTeams).toBe(false);
+    });
+
+    it('reports domain errors without publishing anything', async () => {
+      const { game, host } = await launch([teamRound('42')]);
+      unwrap(await join('Alice'));
+      const before = events.events.length;
+      const tooFewPlayers = await generate(host, 2);
+      expect(!tooFewPlayers.ok && tooFewPlayers.error.code).toBe('NOT_ENOUGH_PLAYERS');
+      expect(events.events).toHaveLength(before);
+      expect(game.hasTeams).toBe(false);
+    });
+
+    it('is refused once the party started', async () => {
+      const { host } = await launch([roundInput('42', 'classic', 2)]);
+      unwrap(await join('Alice'));
+      unwrap(await join('Bob'));
+      unwrap(await nextSong(host));
+      const result = await generate(host);
+      expect(!result.ok && result.error.code).toBe('TEAMS_LOCKED');
+    });
+
+    it('is required before the first song of a game with a team round', async () => {
+      const { host } = await launch([teamRound('42')]);
+      unwrap(await join('Alice'));
+      unwrap(await join('Bob'));
+      const requestsBefore = catalog.requests.length;
+
+      const refused = await nextSong(host);
+      expect(!refused.ok && refused.error.code).toBe('TEAMS_REQUIRED');
+      // Refused before asking Deezer for the playlist.
+      expect(catalog.requests).toHaveLength(requestsBefore);
+
+      unwrap(await generate(host));
+      expect((await nextSong(host)).ok).toBe(true);
+    });
+
+    it('tells everybody about a latecomer joining a team, but only once teams exist', async () => {
+      const { game, host } = await launch([teamRound('42')]);
+      unwrap(await join('Alice'));
+      unwrap(await join('Bob'));
+      expect(events.types()).not.toContain('teamsUpdated');
+
+      unwrap(await generate(host));
+      const { player } = unwrap(await join('Chloé'));
+
+      expect(game.teamOf(player.id)).toBeDefined();
+      expect(events.types().slice(-2)).toEqual(['playerJoined', 'teamsUpdated']);
     });
   });
 });

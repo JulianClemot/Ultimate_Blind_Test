@@ -5,6 +5,7 @@ import type {
   ClientToServerEvents,
   ErrorDto,
   GameSnapshotDto,
+  GenerateTeamsPayload,
   JoinGamePayload,
   JudgeAnswerPayload,
   NextSongResponseDto,
@@ -13,6 +14,7 @@ import type {
   RevealDto,
   ScoreDto,
   SubmitAnswerPayload,
+  TeamDto,
 } from '@ubt/shared';
 
 import type { GameSocket } from './socketClient';
@@ -36,6 +38,7 @@ export interface GameGateway {
   nextSong(): Promise<NextSongResponseDto>;
   revealSong(): Promise<RevealDto>;
   judgeAnswer(payload: JudgeAnswerPayload): Promise<AnswerDto>;
+  generateTeams(payload: GenerateTeamsPayload): Promise<readonly TeamDto[]>;
   finishGame(): Promise<readonly ScoreDto[]>;
   joinGame(payload: JoinGamePayload): Promise<PlayerSessionDto>;
   rejoinGame(payload: RejoinGamePayload): Promise<PlayerSessionDto>;
@@ -64,6 +67,7 @@ export const createSocketGameGateway = (socket: GameSocket): GameGateway => {
     nextSong: () => request<NextSongResponseDto>('song:next'),
     revealSong: () => request<RevealDto>('song:reveal'),
     judgeAnswer: (payload) => request<AnswerDto>('answer:judge', payload),
+    generateTeams: (payload) => request<readonly TeamDto[]>('teams:generate', payload),
     finishGame: () => request<readonly ScoreDto[]>('game:finish'),
     joinGame: (payload) => request<PlayerSessionDto>('player:join', payload),
     rejoinGame: (payload) => request<PlayerSessionDto>('player:rejoin', payload),

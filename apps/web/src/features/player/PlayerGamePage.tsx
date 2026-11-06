@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router';
 
 import { cn } from '@/shared/lib/cn';
 import { ROUND_TYPE_INFO } from '@/shared/lib/roundTypes';
+import { findTeam, usesTeamMode } from '@/shared/lib/teams';
 import { formatCountdown } from '@/shared/lib/time';
 import { useCountdown } from '@/shared/lib/useCountdown';
 import { useSessionStore, type PlayerSession } from '@/shared/session/sessionStore';
@@ -15,6 +16,7 @@ import { PageLayout } from '@/shared/ui/PageLayout';
 import { Recap } from '@/shared/ui/Recap';
 import { GameOverview } from '@/shared/ui/GameOverview';
 import { Scoreboard } from '@/shared/ui/Scoreboard';
+import { TeamScoreboard } from '@/shared/ui/TeamScoreboard';
 
 import { foundParts } from './playerGameState';
 import { usePlayerGame } from './usePlayerGame';
@@ -76,7 +78,15 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
 
   if (state.status === 'finished') {
     // The recap follows `game:finished` by a few ms; the plain scores fill the gap.
-    if (state.recap) return <Recap recap={state.recap} playerId={state.player.id} />;
+    if (state.recap) {
+      return (
+        <Recap
+          recap={state.recap}
+          playerId={state.player.id}
+          {...(state.myTeamId && { teamId: state.myTeamId })}
+        />
+      );
+    }
     return (
       <Card>
         <CardTitle>{state.name} — final scores</CardTitle>
@@ -85,12 +95,25 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
     );
   }
 
+  const teamRounds = usesTeamMode(state.rounds);
+  const myTeam = findTeam(state.teams, state.myTeamId);
+  const teammates = myTeam?.players.filter((p) => p.id !== state.player.id) ?? [];
+
   return (
     <>
       <Card className="flex flex-col gap-4">
         <CardTitle className="mb-0">
           {state.player.name} · {state.name}
         </CardTitle>
+        {myTeam && (
+          <p className="rounded-lg bg-secondary p-3 text-sm" aria-label="Your team">
+            Your team: <span className="font-bold">{myTeam.name}</span>
+            {teammates.length > 0 && <> · with {teammates.map((p) => p.name).join(', ')}</>}
+          </p>
+        )}
+        {teamRounds && !myTeam && !song && (
+          <p className="text-sm text-muted-foreground">The host will draw the teams soon.</p>
+        )}
         {!song && <p>Waiting for the host to play the first song…</p>}
 
         {song && (
@@ -148,6 +171,13 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
             How the game works · {state.rounds.length} round{state.rounds.length === 1 ? '' : 's'}
           </CardTitle>
           <GameOverview rounds={state.rounds} />
+        </Card>
+      )}
+
+      {teamRounds && state.teamScoreboard.length > 0 && (
+        <Card>
+          <CardTitle>Team scores</CardTitle>
+          <TeamScoreboard scores={state.teamScoreboard} teamId={state.myTeamId} />
         </Card>
       )}
 

@@ -31,10 +31,11 @@ export interface GameDesignSnapshot {
     readonly type: RoundType;
     readonly playlistId: string;
     readonly playlistTitle: string | null;
-    /** `winnerCount` and `rankStep` are absent in designs saved before those rules existed. */
-    readonly rules: Omit<RoundRulesProps, 'winnerCount' | 'rankStep'> & {
+    /** `winnerCount`, `rankStep` and `teamMode` are absent in designs saved before those rules existed. */
+    readonly rules: Omit<RoundRulesProps, 'winnerCount' | 'rankStep' | 'teamMode'> & {
       readonly winnerCount?: number;
       readonly rankStep?: number;
+      readonly teamMode?: boolean;
     };
   }[];
 }
@@ -77,7 +78,12 @@ export class GameDesign {
   static restore(snapshot: GameDesignSnapshot): GameDesign {
     const rounds = snapshot.rounds.map((round): RoundPlan => {
       const playlist = PlaylistId.parse(round.playlistId);
-      const rules = RoundRules.create({ winnerCount: 1, rankStep: 0, ...round.rules });
+      const rules = RoundRules.create({
+        winnerCount: 1,
+        rankStep: 0,
+        teamMode: false,
+        ...round.rules,
+      });
       if (!playlist.ok || !rules.ok) throw new Error(`Corrupted design ${snapshot.id}`);
       return {
         name: round.name ?? '',

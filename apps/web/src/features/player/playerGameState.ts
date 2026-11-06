@@ -5,6 +5,8 @@ import type {
   RevealDto,
   ScoreDto,
   SongDto,
+  TeamDto,
+  TeamScoreDto,
 } from '@ubt/shared';
 
 /** Pure state transitions of the player screen — easy to unit test. */
@@ -13,6 +15,8 @@ export type PlayerGameState = PlayerSessionDto | null;
 
 export type PlayerGameAction =
   | { type: 'rejoined'; session: PlayerSessionDto }
+  | { type: 'teamsUpdated'; teams: readonly TeamDto[] }
+  | { type: 'teamScoresUpdated'; teamScoreboard: readonly TeamScoreDto[] }
   | { type: 'songStarted'; song: SongDto }
   | { type: 'answerSent'; answer: AnswerDto }
   | { type: 'answerJudged'; answer: AnswerDto }
@@ -30,6 +34,17 @@ export const playerGameReducer = (
   if (!state) return state;
 
   switch (action.type) {
+    case 'teamsUpdated':
+      // The roster changes when teams are shuffled or a latecomer joins; the player's own team follows.
+      return {
+        ...state,
+        teams: action.teams,
+        myTeamId:
+          action.teams.find((team) => team.players.some((p) => p.id === state.player.id))?.id ??
+          null,
+      };
+    case 'teamScoresUpdated':
+      return { ...state, teamScoreboard: action.teamScoreboard };
     case 'songStarted':
       return state.currentSong?.id === action.song.id
         ? state
@@ -60,6 +75,7 @@ export const playerGameReducer = (
         currentSong: { ...state.currentSong, revealed: true },
         reveal: action.reveal,
         scoreboard: action.reveal.scoreboard,
+        teamScoreboard: action.reveal.teamScoreboard,
       };
     case 'scoreboardUpdated':
       return { ...state, scoreboard: action.scoreboard };

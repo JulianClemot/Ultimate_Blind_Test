@@ -2,6 +2,7 @@ import type { Answer } from './Answer';
 import type { Player } from './Player';
 import type { Round } from './Round';
 import type { Song } from './Song';
+import type { Team, TeamScore } from './Team';
 
 /**
  * End-of-game recap: final standings, fun awards and a replay of the tracks. Pure and recomputed
@@ -47,8 +48,17 @@ export interface SongRecap {
   readonly results: readonly PlayerSongResult[];
 }
 
+export interface TeamStanding {
+  /** Ties share a rank (1, 2, 2, 4). */
+  readonly rank: number;
+  readonly team: Team;
+  readonly points: number;
+}
+
 export interface GameRecap {
   readonly standings: readonly Standing[];
+  /** Empty when the game has no team scores. */
+  readonly teamStandings: readonly TeamStanding[];
   readonly superlatives: readonly Superlative[];
   readonly songs: readonly SongRecap[];
 }
@@ -119,7 +129,19 @@ const best = (
   return winner;
 };
 
-export const buildRecap = (players: readonly Player[], rounds: readonly Round[]): GameRecap => {
+/** `teamScores` come best first; ties share the rank of the first of them. */
+const rankTeams = (teamScores: readonly TeamScore[]): TeamStanding[] =>
+  teamScores.map(({ team, points }) => ({
+    team,
+    points,
+    rank: teamScores.findIndex((other) => other.points === points) + 1,
+  }));
+
+export const buildRecap = (
+  players: readonly Player[],
+  rounds: readonly Round[],
+  teamScores: readonly TeamScore[] = [],
+): GameRecap => {
   const songs = rounds.flatMap((round) => round.listSongs());
   const results = songs.map((song) => players.map((player) => resultOf(song, player)));
 
@@ -176,6 +198,7 @@ export const buildRecap = (players: readonly Player[], rounds: readonly Round[])
 
   return {
     standings,
+    teamStandings: rankTeams(teamScores),
     superlatives,
     songs: songs.map((song, s) => {
       const round = rounds[song.roundNumber - 1];

@@ -6,6 +6,8 @@ import type {
   PlayerDto,
   RevealDto,
   ScoreDto,
+  TeamDto,
+  TeamScoreDto,
 } from '@ubt/shared';
 
 /** Pure state transitions of the host screen — easy to unit test. */
@@ -15,6 +17,8 @@ export type HostGameState = GameSnapshotDto | null;
 export type HostGameAction =
   | { type: 'attached'; snapshot: GameSnapshotDto }
   | { type: 'playerJoined'; player: PlayerDto }
+  | { type: 'teamsUpdated'; teams: readonly TeamDto[] }
+  | { type: 'teamScoresUpdated'; teamScoreboard: readonly TeamScoreDto[] }
   | { type: 'songStarted'; song: HostSongDto }
   | { type: 'answerReceived'; answer: AnswerDto }
   | { type: 'answerJudged'; answer: AnswerDto }
@@ -45,6 +49,10 @@ export const hostGameReducer = (state: HostGameState, action: HostGameAction): H
               { playerId: action.player.id, playerName: action.player.name, points: 0 },
             ],
           };
+    case 'teamsUpdated':
+      return { ...state, teams: action.teams };
+    case 'teamScoresUpdated':
+      return { ...state, teamScoreboard: action.teamScoreboard };
     case 'songStarted':
       return state.currentSong?.id === action.song.id
         ? state
@@ -76,6 +84,7 @@ export const hostGameReducer = (state: HostGameState, action: HostGameAction): H
         currentSong: { ...state.currentSong, revealed: true },
         reveal: action.reveal,
         scoreboard: action.reveal.scoreboard,
+        teamScoreboard: action.reveal.teamScoreboard,
       };
     case 'scoreboardUpdated':
       return {

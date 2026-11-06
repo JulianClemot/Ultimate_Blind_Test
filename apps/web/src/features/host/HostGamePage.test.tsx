@@ -1,5 +1,5 @@
 import type { GameSnapshotDto } from '@ubt/shared';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -112,6 +112,98 @@ describe('<HostGamePage />', () => {
       renderPage(snapshot({ status: 'finished', hasNextSong: false }));
 
       expect(await screen.findByText('Friday night — final scores')).toBeInTheDocument();
+    });
+  });
+
+  describe('teams', () => {
+    const alice = { id: 'p1', name: 'Alice' };
+    const bob = { id: 'p2', name: 'Bob' };
+    const teamGame = (overrides: Partial<GameSnapshotDto> = {}) => {
+      const base = snapshot();
+      return snapshot({
+        players: [alice, bob],
+        rounds: base.rounds.map((round, i) =>
+          i === 0 ? { ...round, rules: { ...round.rules, teamMode: true } } : round,
+        ),
+        ...overrides,
+      });
+    };
+    const generatedTeams = [
+      { id: 'team-1', name: 'The Funky Flamingos', players: [alice] },
+      { id: 'team-2', name: 'The Neon Llamas', players: [bob] },
+    ];
+
+    it('offers nothing about teams when no round uses the team mode', async () => {
+      renderPage(snapshot({ players: [alice, bob] }));
+      await screen.findByText('The game · 2 rounds');
+      expect(screen.queryByRole('button', { name: 'Generate the teams' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Play the first song' })).toBeEnabled();
+    });
+
+    it('puts the generate button right before the start button, which waits for the teams', async () => {
+      renderPage(teamGame());
+
+      const generate = await screen.findByRole('button', { name: 'Generate the teams' });
+      const start = screen.getByRole('button', { name: 'Play the first song' });
+      expect(
+        generate.compareDocumentPosition(start) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(start).toBeDisabled();
+      expect(screen.getByText('Generate the teams before playing the first song.')).toBeVisible();
+    });
+
+    it('generates the teams, shows them, then allows to start', async () => {
+      const generateTeams = vi.fn().mockResolvedValue(generatedTeams);
+      renderWithRealtime(
+        <MemoryRouter initialEntries={['/host/g1']}>
+          <Routes>
+            <Route path="/host/:gameId" element={<HostGamePage />} />
+          </Routes>
+        </MemoryRouter>,
+        fakeGateway({ attachHost: vi.fn().mockResolvedValue(teamGame()), generateTeams }),
+      );
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Generate the teams' }));
+
+      expect(generateTeams).toHaveBeenCalledWith({ teamCount: 2 });
+      const teams = await screen.findByRole('region', { name: 'Teams' });
+      expect(teams).toHaveTextContent('The Funky Flamingos (1)Alice');
+      expect(teams).toHaveTextContent('The Neon Llamas (1)Bob');
+      expect(screen.getByRole('button', { name: 'Play the first song' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Shuffle the teams again' })).toBeVisible();
+    });
+
+    it('lets a host coming back find the teams already drawn', async () => {
+      renderPage(teamGame({ teams: generatedTeams }));
+      expect(await screen.findByRole('button', { name: 'Play the first song' })).toBeEnabled();
+      expect(screen.getByRole('region', { name: 'Teams' })).toHaveTextContent('The Neon Llamas');
+    });
+
+    it('shows the team scores above the players in the scores panel', async () => {
+      renderPage(
+        teamGame({
+          status: 'playing',
+          currentSong: hostSong({ revealed: true }),
+          teams: generatedTeams,
+          scoreboard: [
+            { playerId: 'p1', playerName: 'Alice', points: 3 },
+            { playerId: 'p2', playerName: 'Bob', points: 1 },
+          ],
+          teamScoreboard: [
+            { teamId: 'team-1', teamName: 'The Funky Flamingos', points: 3 },
+            { teamId: 'team-2', teamName: 'The Neon Llamas', points: 1 },
+          ],
+        }),
+      );
+      await userEvent.click(await screen.findByRole('button', { name: 'Scores' }));
+
+      const panel = screen.getByRole('complementary', { name: 'Scores' });
+      expect(within(panel).getByRole('list', { name: 'Team scoreboard' })).toHaveTextContent(
+        '1.The Funky Flamingos3 pts',
+      );
+      expect(within(panel).getByRole('list', { name: 'Scoreboard' })).toHaveTextContent(
+        '1.Alice3 pts',
+      );
     });
   });
 });

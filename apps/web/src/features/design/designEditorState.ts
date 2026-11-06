@@ -47,6 +47,7 @@ export type EditorAction =
   | { type: 'ruleChanged'; key: string; rule: NumericRuleDto; value: number }
   | { type: 'scoringChanged'; key: string; scoring: RoundRulesDto['scoring'] }
   | { type: 'playbackRateChanged'; key: string; rate: number }
+  | { type: 'teamModeChanged'; key: string; teamMode: boolean }
   | { type: 'playlistChanged'; key: string; playlist: string }
   | { type: 'playlistChecked'; key: string; playlist: string; summary: PlaylistSummaryDto }
   | { type: 'saved'; design: GameDesignDto };
@@ -126,11 +127,15 @@ export const designEditorReducer = (state: EditorState, action: EditorAction): E
       return { ...state, dirty: true, rounds };
     }
     case 'roundTypeChanged':
-      // A new type resets the rules to its preset, except the number of songs.
+      // A new type resets the rules to its preset, except the number of songs and the team mode.
       return updateRound(state, action.key, (round) => ({
         ...round,
         type: action.roundType,
-        rules: { ...action.catalog.presets[action.roundType], songCount: round.rules.songCount },
+        rules: {
+          ...action.catalog.presets[action.roundType],
+          songCount: round.rules.songCount,
+          teamMode: round.rules.teamMode,
+        },
       }));
     case 'ruleChanged':
       return updateRound(state, action.key, (round) => ({
@@ -146,6 +151,11 @@ export const designEditorReducer = (state: EditorState, action: EditorAction): E
       return updateRound(state, action.key, (round) => ({
         ...round,
         rules: { ...round.rules, playbackRate: action.rate },
+      }));
+    case 'teamModeChanged':
+      return updateRound(state, action.key, (round) => ({
+        ...round,
+        rules: { ...round.rules, teamMode: action.teamMode },
       }));
     case 'playlistChanged':
       return updateRound(state, action.key, (round) => ({

@@ -25,6 +25,10 @@ export const useHostGame = (session: HostSession) => {
   });
 
   useSocketEvent('player:joined', (player) => dispatch({ type: 'playerJoined', player }));
+  useSocketEvent('teams:updated', (teams) => dispatch({ type: 'teamsUpdated', teams }));
+  useSocketEvent('team-scores:updated', (teamScoreboard) =>
+    dispatch({ type: 'teamScoresUpdated', teamScoreboard }),
+  );
   useSocketEvent('host:song-started', (song) => dispatch({ type: 'songStarted', song }));
   useSocketEvent('answer:received', (answer) => dispatch({ type: 'answerReceived', answer }));
   useSocketEvent('answer:judged', (answer) => dispatch({ type: 'answerJudged', answer }));
@@ -54,10 +58,14 @@ export const useHostGame = (session: HostSession) => {
     mutationFn: (payload: JudgeAnswerPayload) => gateway.judgeAnswer(payload),
     onSuccess: (answer) => dispatch({ type: 'answerJudged', answer }),
   });
+  const generateTeams = useMutation({
+    mutationFn: (teamCount: number) => gateway.generateTeams({ teamCount }),
+    onSuccess: (teams) => dispatch({ type: 'teamsUpdated', teams }),
+  });
   const finishGame = useMutation({
     mutationFn: () => gateway.finishGame(),
     onSuccess: (scoreboard) => dispatch({ type: 'gameFinished', scoreboard }),
   });
 
-  return { game, attachError, nextSong, revealSong, judgeAnswer, finishGame };
+  return { game, attachError, nextSong, revealSong, judgeAnswer, generateTeams, finishGame };
 };

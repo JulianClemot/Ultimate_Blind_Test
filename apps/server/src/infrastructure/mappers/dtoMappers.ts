@@ -12,10 +12,22 @@ import type {
   RoundSummaryDto,
   ScoreDto,
   SongDto,
+  TeamDto,
+  TeamScoreDto,
 } from '@ubt/shared';
 
 import type { PlayerSession, Playlist } from '../../application';
-import type { Answer, Game, GameDesign, Player, RoundPlan, Score, Song } from '../../domain';
+import type {
+  Answer,
+  Game,
+  GameDesign,
+  Player,
+  RoundPlan,
+  Score,
+  Song,
+  Team,
+  TeamScore,
+} from '../../domain';
 
 // ── Game designs ────────────────────────────────────────────────────────────
 
@@ -57,6 +69,25 @@ const toScoreDto = ({ player, points }: Score): ScoreDto => ({
 export const toPublicScoreboard = (game: Game): ScoreDto[] =>
   game.scoreboard({ revealedOnly: true }).map(toScoreDto);
 
+export const toTeamDto = (game: Game, team: Team): TeamDto => ({
+  id: team.id,
+  name: team.name,
+  players: game.membersOf(team).map(toPlayerDto),
+});
+
+export const toTeamDtos = (game: Game): TeamDto[] =>
+  game.listTeams().map((team) => toTeamDto(game, team));
+
+const toTeamScoreDto = ({ team, points }: TeamScore): TeamScoreDto => ({
+  teamId: team.id,
+  teamName: team.name,
+  points,
+});
+
+/** Same rule as for players: only revealed songs count. */
+export const toPublicTeamScoreboard = (game: Game): TeamScoreDto[] =>
+  game.teamScoreboard({ revealedOnly: true }).map(toTeamScoreDto);
+
 export const toSongDto = (game: Game, song: Song): SongDto => {
   const round = game.listRounds()[song.roundNumber - 1];
   return {
@@ -89,6 +120,7 @@ export const toRevealDto = (game: Game, song: Song): RevealDto => ({
   title: song.track.title,
   artist: song.track.artist,
   scoreboard: toPublicScoreboard(game),
+  teamScoreboard: toPublicTeamScoreboard(game),
 });
 
 export const toAnswerDto = (game: Game, answer: Answer): AnswerDto => ({
@@ -129,6 +161,12 @@ export const toGameRecapDto = (game: Game): GameRecapDto | null => {
       playerName: player.name.value,
       points,
     })),
+    teamStandings: recap.teamStandings.map(({ rank, team, points }) => ({
+      rank,
+      teamId: team.id,
+      teamName: team.name,
+      points,
+    })),
     superlatives: recap.superlatives.map(({ kind, player, value }) => ({
       kind,
       playerId: player.id,
@@ -154,11 +192,13 @@ export const toGameSnapshotDto = (game: Game): GameSnapshotDto => {
     name: game.name,
     status: game.status,
     players: game.listPlayers().map(toPlayerDto),
+    teams: toTeamDtos(game),
     rounds: toRoundSummaries(game),
     currentSong: song ? toHostSongDto(game, song) : null,
     reveal: revealOf(game),
     answers: song ? song.answersByArrival().map((a) => toAnswerDto(game, a)) : [],
     scoreboard: toPublicScoreboard(game),
+    teamScoreboard: toPublicTeamScoreboard(game),
     everyoneAnswered: game.everyoneHasAnswered(),
     hasNextSong: game.upcomingRound !== undefined,
     recap: toGameRecapDto(game),
@@ -173,12 +213,15 @@ export const toPlayerSessionDto = ({ game, player }: PlayerSession): PlayerSessi
     name: game.name,
     status: game.status,
     player: toPlayerDto(player),
+    teams: toTeamDtos(game),
+    myTeamId: game.teamOf(player.id)?.id ?? null,
     rounds: toRoundSummaries(game),
     currentSong: song ? toSongDto(game, song) : null,
     reveal: revealOf(game),
     myAnswers: song ? song.answersOf(player.id).map((a) => toAnswerDto(game, a)) : [],
     everyoneAnswered: game.everyoneHasAnswered(),
     scoreboard: toPublicScoreboard(game),
+    teamScoreboard: toPublicTeamScoreboard(game),
     recap: toGameRecapDto(game),
   };
 };

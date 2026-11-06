@@ -42,6 +42,9 @@ export class NextSong implements NextSongUseCase {
       this.events.gameFinished(game);
       return ok({ kind: 'finished', game });
     }
+    // Also checked before the catalog call, for the same reason.
+    const ready = game.checkTeamsReady();
+    if (!ready.ok) return ready;
     const playlist = await this.catalog.playlist(round.plan.playlist);
     if (!playlist.ok) return playlist;
 

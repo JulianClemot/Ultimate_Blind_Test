@@ -19,9 +19,11 @@ export interface RoundRulesDto {
   readonly answerTimeSec: number;
   readonly excerptSec: number;
   readonly playbackRate: number;
+  /** The points of this round also count for the teams. */
+  readonly teamMode: boolean;
 }
 
-export type NumericRuleDto = Exclude<keyof RoundRulesDto, 'scoring' | 'playbackRate'>;
+export type NumericRuleDto = Exclude<keyof RoundRulesDto, 'scoring' | 'playbackRate' | 'teamMode'>;
 
 /** Presets and limits served by the server, so the editor never duplicates the rules. */
 export interface RoundCatalogDto {
@@ -75,6 +77,19 @@ export interface ScoreDto {
   readonly points: number;
 }
 
+export interface TeamDto {
+  readonly id: string;
+  readonly name: string;
+  readonly players: readonly PlayerDto[];
+}
+
+export interface TeamScoreDto {
+  readonly teamId: string;
+  readonly teamName: string;
+  /** Points of the revealed songs of team-mode rounds. */
+  readonly points: number;
+}
+
 /**
  * A round as announced to everyone: its name, type and rules. The playlist is left out on
  * purpose: its id or title could give the songs away.
@@ -124,6 +139,8 @@ export interface RevealDto {
   readonly artist: string;
   /** Scores of revealed songs only. */
   readonly scoreboard: readonly ScoreDto[];
+  /** Empty until teams are generated. */
+  readonly teamScoreboard: readonly TeamScoreDto[];
 }
 
 /** Every player answered `songId`: the reveal follows after a short pause. */
@@ -171,6 +188,14 @@ export interface SuperlativeDto {
   readonly value: number;
 }
 
+export interface TeamStandingDto {
+  /** Ties share a rank (1, 2, 2, 4). */
+  readonly rank: number;
+  readonly teamId: string;
+  readonly teamName: string;
+  readonly points: number;
+}
+
 /** What a player did on a song. Never the text of their answers. */
 export interface PlayerSongResultDto {
   readonly playerId: string;
@@ -198,6 +223,8 @@ export interface SongRecapDto {
 export interface GameRecapDto {
   readonly gameName: string;
   readonly standings: readonly StandingDto[];
+  /** Empty when no round was played in team mode. */
+  readonly teamStandings: readonly TeamStandingDto[];
   readonly superlatives: readonly SuperlativeDto[];
   readonly songs: readonly SongRecapDto[];
 }
@@ -208,6 +235,8 @@ export interface GameSnapshotDto {
   readonly name: string;
   readonly status: GameStatusDto;
   readonly players: readonly PlayerDto[];
+  /** Empty until the host generates them. */
+  readonly teams: readonly TeamDto[];
   readonly rounds: readonly RoundSummaryDto[];
   readonly currentSong: HostSongDto | null;
   /** Set once the current song is revealed. */
@@ -216,6 +245,7 @@ export interface GameSnapshotDto {
   readonly answers: readonly AnswerDto[];
   /** Scores of revealed songs, like the players see them. */
   readonly scoreboard: readonly ScoreDto[];
+  readonly teamScoreboard: readonly TeamScoreDto[];
   /** True while the song is open and every player answered it: the reveal is about to happen. */
   readonly everyoneAnswered: boolean;
   /** False when the next action finishes the game. */
@@ -237,6 +267,10 @@ export interface PlayerSessionDto {
   readonly name: string;
   readonly status: GameStatusDto;
   readonly player: PlayerDto;
+  /** Empty until the host generates them. */
+  readonly teams: readonly TeamDto[];
+  /** The team of this player, once teams are generated. */
+  readonly myTeamId: string | null;
   /** Every round of the game with its rules, to show in the lobby. */
   readonly rounds: readonly RoundSummaryDto[];
   readonly currentSong: SongDto | null;
@@ -247,6 +281,7 @@ export interface PlayerSessionDto {
   readonly everyoneAnswered: boolean;
   /** Scores of revealed songs only. */
   readonly scoreboard: readonly ScoreDto[];
+  readonly teamScoreboard: readonly TeamScoreDto[];
   /** Null until the game is finished. */
   readonly recap: GameRecapDto | null;
 }
