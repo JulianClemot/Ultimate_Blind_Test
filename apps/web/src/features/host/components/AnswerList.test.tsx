@@ -28,8 +28,33 @@ describe('<AnswerList />', () => {
       />,
     );
     const items = screen.getAllByRole('listitem');
-    expect(items[0]).toHaveTextContent('1.AliceThrillerTitle ✓Artist ✗1.234 s');
-    expect(items[1]).toHaveTextContent('2.BobBeat ItTitle ✗Artist ✗2.500 s');
+    expect(items[0]).toHaveTextContent('1.AliceThriller◐ PartialTitle ✓Artist ✗1.234 s');
+    expect(items[1]).toHaveTextContent('2.BobBeat It✗ WrongTitle ✗Artist ✗2.500 s');
+  });
+
+  it('summarises each answer as correct, partial or wrong', () => {
+    render(
+      <AnswerList
+        answers={[
+          answer({ id: 'a1', playerName: 'Alice', verdict: { title: true, artist: true } }),
+          answer({ id: 'a2', playerName: 'Bob', verdict: { title: true, artist: false } }),
+          answer({ id: 'a3', playerName: 'Cleo', verdict: { title: false, artist: false } }),
+        ]}
+      />,
+    );
+    expect(screen.getByRole('status', { name: 'Alice: correct' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Bob: partial' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Cleo: wrong' })).toBeInTheDocument();
+  });
+
+  it('judges only the asked parts', () => {
+    render(
+      <AnswerList
+        answers={[answer({ playerName: 'Alice', verdict: { title: true, artist: false } })]}
+        asks={{ title: true, artist: false }}
+      />,
+    );
+    expect(screen.getByRole('status', { name: 'Alice: correct' })).toBeInTheDocument();
   });
 
   it('only shows the parts the round asks for', () => {
