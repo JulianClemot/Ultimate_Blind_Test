@@ -1,10 +1,11 @@
 import type { SuggestionDto } from '@ubt/shared';
-import { useId, useState, type KeyboardEvent, type SubmitEvent } from 'react';
+import { useId, useRef, useState, type KeyboardEvent, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/shared/lib/cn';
 import { findSuggestions } from '@/shared/lib/suggestions';
 import { Button } from '@/shared/ui/button';
+import { CloseIcon } from '@/shared/ui/icons';
 import { Input } from '@/shared/ui/input';
 
 const PLACEHOLDERS = {
@@ -36,6 +37,7 @@ interface AnswerFormProps {
 export const AnswerForm = ({ suggestions, source, onSubmit, pending }: AnswerFormProps) => {
   const { t } = useTranslation();
   const listId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState('');
   const [picked, setPicked] = useState<SuggestionDto | null>(null);
   const [open, setOpen] = useState(true);
@@ -69,6 +71,13 @@ export const AnswerForm = ({ suggestions, source, onSubmit, pending }: AnswerFor
     }
   };
 
+  const clear = () => {
+    setText('');
+    setPicked(null);
+    setActive(0);
+    inputRef.current?.focus();
+  };
+
   const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     onSubmit(picked ? { text, suggestionId: picked.id } : { text });
@@ -80,6 +89,8 @@ export const AnswerForm = ({ suggestions, source, onSubmit, pending }: AnswerFor
     <form onSubmit={submit} className="flex flex-col gap-3">
       <div className="relative">
         <Input
+          ref={inputRef}
+          className="pr-11"
           aria-label={t('player.answerLabel')}
           placeholder={t(PLACEHOLDERS[source ?? 'song'])}
           autoFocus
@@ -104,6 +115,19 @@ export const AnswerForm = ({ suggestions, source, onSubmit, pending }: AnswerFor
             ...(showList && { 'aria-activedescendant': optionId(active) }),
           })}
         />
+        {text !== '' && (
+          <button
+            type="button"
+            aria-label={t('player.clearAnswer')}
+            title={t('player.clearAnswer')}
+            // Keep the focus in the field while clearing it.
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={clear}
+            className="absolute inset-y-0 right-3 my-auto flex size-7 cursor-pointer items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <CloseIcon />
+          </button>
+        )}
         {showList && (
           <ul
             id={listId}

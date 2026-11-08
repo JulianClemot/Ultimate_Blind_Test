@@ -107,6 +107,7 @@ export const en = {
     answerLabel: 'Your answer',
     answerPlaceholder: 'Artist – Title (one guess only!)',
     answer: 'Answer!',
+    clearAnswer: 'Clear',
     suggestions: 'Suggestions',
     pickedHint: 'Picked from the suggestions: no bonus points.',
     title: 'Title',

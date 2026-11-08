@@ -124,3 +124,40 @@ describe('<AnswerForm /> in a round about films and series', () => {
     expect(onSubmit).toHaveBeenCalledWith({ text: 'Frozen 2', suggestionId: 'frozen 2' });
   });
 });
+
+describe('<AnswerForm /> clear button', () => {
+  it('only shows while there is something to clear', async () => {
+    render(<AnswerForm suggestions={[]} onSubmit={vi.fn()} pending={false} />);
+    expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText('Your answer'), 'dap');
+    expect(screen.getByRole('button', { name: 'Clear' })).toBeInTheDocument();
+  });
+
+  it('empties the field and keeps the focus there', async () => {
+    render(<AnswerForm suggestions={[]} onSubmit={vi.fn()} pending={false} />);
+    const input = screen.getByLabelText('Your answer');
+    await userEvent.type(input, 'daft punk');
+    await userEvent.click(screen.getByRole('button', { name: 'Clear' }));
+
+    expect(input).toHaveValue('');
+    expect(input).toHaveFocus();
+    expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Answer!' })).toBeDisabled();
+  });
+
+  it('forgets a picked suggestion, so the next answer is free text', async () => {
+    const onSubmit = vi.fn();
+    render(<AnswerForm suggestions={suggestions} onSubmit={onSubmit} pending={false} />);
+    const input = screen.getByLabelText('Your answer');
+    await userEvent.type(input, 'queen');
+    await userEvent.click(screen.getByRole('option'));
+    expect(screen.getByText(/no bonus/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(screen.queryByText(/no bonus/i)).not.toBeInTheDocument();
+    await userEvent.type(input, 'abba');
+    await userEvent.click(screen.getByRole('button', { name: 'Answer!' }));
+    expect(onSubmit).toHaveBeenCalledWith({ text: 'abba' });
+  });
+});

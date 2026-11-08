@@ -113,6 +113,7 @@ export const fr: Messages = {
     answerLabel: 'Votre réponse',
     answerPlaceholder: 'Artiste – Titre (une seule tentative !)',
     answer: 'Répondre !',
+    clearAnswer: 'Effacer',
     suggestions: 'Suggestions',
     pickedHint: 'Choisi parmi les suggestions : aucun bonus.',
     title: 'Titre',
