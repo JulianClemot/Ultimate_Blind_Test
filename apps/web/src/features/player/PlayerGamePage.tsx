@@ -35,6 +35,10 @@ const AnswerForm = ({ onSubmit, pending }: { onSubmit: (t: string) => void; pend
         placeholder="Artist – Title (one guess only!)"
         autoFocus
         autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        enterKeyHint="send"
         value={text}
         onChange={(e) => setText(e.target.value)}
       />

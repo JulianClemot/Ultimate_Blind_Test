@@ -30,6 +30,8 @@ export const JoinForm = ({
         placeholder="GAME CODE"
         autoCapitalize="characters"
         autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
         className="font-mono uppercase tracking-widest"
         value={code}
         onChange={(e) => setCode(e.target.value)}
@@ -37,6 +39,9 @@ export const JoinForm = ({
       <Input
         aria-label="Your name"
         placeholder="Your name"
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
         value={playerName}
         onChange={(e) => setPlayerName(e.target.value)}
       />
