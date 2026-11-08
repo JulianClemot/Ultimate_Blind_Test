@@ -100,3 +100,17 @@ export const matchAnswer = (text: string, track: Track): Verdict => {
     artist: artistNames(track.artist).some((name) => contains(answer, normalize(name))),
   };
 };
+
+const same = (a: string, b: string): boolean => normalize(a).join(' ') === normalize(b).join(' ');
+
+/**
+ * Verdict of a track picked from a list of suggestions. Picking is an exact choice, so, unlike
+ * free text, there is no typo tolerance: "Hello" must not match "Hella".
+ */
+export const matchPick = (
+  picked: Pick<Track, 'title' | 'artist'>,
+  track: Pick<Track, 'title' | 'artist'>,
+): Verdict => ({
+  title: same(picked.title, track.title),
+  artist: same(picked.artist, track.artist),
+});

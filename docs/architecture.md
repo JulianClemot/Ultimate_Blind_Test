@@ -67,6 +67,16 @@ These rules are enforced by `pnpm depcruise` (`.dependency-cruiser.cjs`) in CI.
   (`Scheduler` port, 2 s) the `AutoRevealSong` use case, which reveals that exact song unless the
   host already did. `everyoneAnswered` in the snapshot/session DTOs covers refreshes in the window.
   Players who never connect still count, so the host's "Reveal now" and the timer remain the fallbacks.
+- **Easy mode**: a round rule `easyMode` (off by default; designs saved before it existed restore
+  with it off). On the first song of such a round, `Game.startSong` keeps every playable track of
+  the playlist as the round's **suggestions** (`Round.captureSuggestions`, alphabetical "Artist – Title").
+  Players get them as `SongDto.suggestions` (`song:started`, and the session on reconnect) as `{ id, label }`
+  only; the host and non-easy rounds get an empty list. Nothing says which one is the current song.
+  A player picks one by sending `answer:submit { suggestionId }`: the server replaces `text` by the
+  label, judges the pick **exactly** (`matchPick`, no typo tolerance, unlike free text) and flags the
+  answer `assisted`. Assisted answers score the points of the parts they get right but **no speed
+  or both-parts bonus** (`scoreSong`); they still compete for places. Typed answers behave as in any
+  round. An unknown id (or any id in a non-easy round) fails with `UNKNOWN_SUGGESTION`.
 - **Teams**: a round rule `teamMode` (off by default, stored with the design; designs saved before
   it existed restore with it off) makes the points of that round count for teams too. Individual
   scores always count; `Game.teamScoreboard()` only adds up team-mode rounds. In the lobby, the

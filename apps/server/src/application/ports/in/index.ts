@@ -122,6 +122,8 @@ export interface SubmitAnswerCommand {
   readonly playerId: string;
   readonly text: string;
   readonly clientSentAt: number;
+  /** A suggestion picked in an easy round; replaces `text`. */
+  readonly suggestionId?: string | undefined;
 }
 export type SubmitAnswerUseCase = UseCase<SubmitAnswerCommand, GameAnswer>;
 

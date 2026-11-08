@@ -17,6 +17,7 @@ const song: SongDto = {
   asksTitle: true,
   asksArtist: true,
   revealed: false,
+  suggestions: [],
 };
 
 const playing = playerSession({ status: 'playing', currentSong: song });

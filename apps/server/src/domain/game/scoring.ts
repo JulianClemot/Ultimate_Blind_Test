@@ -16,7 +16,8 @@ const speedPoints = (rules: RoundRules, elapsedMs: number): number =>
  *   the previous one.
  * - `everyone`: each player's earliest correct answer for a part scores.
  * Speed bonus applies per part found; the both-bonus goes to players credited with both parts.
- * Neither bonus depends on the place.
+ * Neither bonus depends on the place. Assisted answers (picked from an easy round's
+ * suggestions) earn the points of the parts they get right, but neither bonus.
  */
 export const scoreSong = (
   rules: RoundRules,
@@ -28,7 +29,8 @@ export const scoreSong = (
   const credited = new Map<string, Set<Target>>();
 
   const credit = (answer: Answer, target: Target, rank: number) => {
-    const gained = rules.pointsForRank(target, rank) + speedPoints(rules, answer.elapsedMs);
+    const speed = answer.assisted ? 0 : speedPoints(rules, answer.elapsedMs);
+    const gained = rules.pointsForRank(target, rank) + speed;
     points.set(answer.playerId, (points.get(answer.playerId) ?? 0) + gained);
     const parts = credited.get(answer.playerId) ?? new Set<Target>();
     parts.add(target);
@@ -46,8 +48,10 @@ export const scoreSong = (
   }
 
   if (targets.length === 2 && rules.bothBonus > 0) {
+    const assisted = new Set(answers.filter((a) => a.assisted).map((a) => a.playerId));
     for (const [playerId, parts] of credited) {
-      if (parts.size === 2) points.set(playerId, (points.get(playerId) ?? 0) + rules.bothBonus);
+      if (parts.size === 2 && !assisted.has(playerId))
+        points.set(playerId, (points.get(playerId) ?? 0) + rules.bothBonus);
     }
   }
   return points;

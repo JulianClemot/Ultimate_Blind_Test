@@ -62,7 +62,12 @@ export class NextSong implements NextSongUseCase {
 
     // The song starts once the track is known, so the catalog lookup is not counted
     // in the players' answer times.
-    const song = game.startSong({ songId: this.ids.next(), startedAt: this.clock.now(), track });
+    const song = game.startSong({
+      songId: this.ids.next(),
+      startedAt: this.clock.now(),
+      track,
+      playlistTracks: playlist.value.tracks,
+    });
     if (!song.ok) return song;
     await this.games.save(game);
     this.events.songStarted(game, song.value);

@@ -92,3 +92,13 @@ describe('describeRules', () => {
     );
   });
 });
+
+describe('describeRules, easy mode', () => {
+  it('tells players about the suggestions and the missing bonus', () => {
+    const easy = { ...catalog.presets.classic, easyMode: true };
+    expect(describeRules(easy)).toContain(
+      'Easy mode: suggestions appear as you type; picking one scores no bonus',
+    );
+    expect(describeRules(catalog.presets.classic).join()).not.toMatch(/Easy mode/);
+  });
+});

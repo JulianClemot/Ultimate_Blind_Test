@@ -21,9 +21,14 @@ export interface RoundRulesDto {
   readonly playbackRate: number;
   /** The points of this round also count for the teams. */
   readonly teamMode: boolean;
+  /** Players get auto-completion; picked answers score no bonus. */
+  readonly easyMode: boolean;
 }
 
-export type NumericRuleDto = Exclude<keyof RoundRulesDto, 'scoring' | 'playbackRate' | 'teamMode'>;
+export type NumericRuleDto = Exclude<
+  keyof RoundRulesDto,
+  'scoring' | 'playbackRate' | 'teamMode' | 'easyMode'
+>;
 
 /** Presets and limits served by the server, so the editor never duplicates the rules. */
 export interface RoundCatalogDto {
@@ -102,6 +107,13 @@ export interface RoundSummaryDto {
   readonly rules: RoundRulesDto;
 }
 
+/** A track of the round's playlist a player may pick in an easy round. */
+export interface SuggestionDto {
+  readonly id: string;
+  /** "Artist – Title". */
+  readonly label: string;
+}
+
 export interface SongDto {
   readonly id: string;
   readonly roundNumber: number;
@@ -117,6 +129,11 @@ export interface SongDto {
   readonly asksTitle: boolean;
   readonly asksArtist: boolean;
   readonly revealed: boolean;
+  /**
+   * Easy rounds: every track of the playlist, alphabetical, the current one among them
+   * (nothing tells which). Empty otherwise, and always for the host.
+   */
+  readonly suggestions: readonly SuggestionDto[];
 }
 
 /**

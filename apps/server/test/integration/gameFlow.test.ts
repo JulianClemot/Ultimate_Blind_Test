@@ -9,12 +9,15 @@ import type {
   PlaylistSummaryDto,
   RoundCatalogDto,
   RoundPlanPayload,
+  RoundRulesDto,
   ServerToClientEvents,
 } from '@ubt/shared';
 import { io as connect, type Socket } from 'socket.io-client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createAppServer, type AppServer } from '../../src/compositionRoot';
+
+type RoundRulesPayload = RoundRulesDto;
 
 type ClientSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -31,13 +34,26 @@ const preview = (id: number) => `https://cdnt-preview.dzcdn.net/api/1/${id}.mp3?
 /** Minimal stand-in for api.deezer.com with two playlists of one playable track each. */
 const PLAYLISTS: Record<
   string,
-  { title: string; track: { id: number; title: string; artist: string } }
+  {
+    title: string;
+    track: { id: number; title: string; artist: string };
+    /** More playable tracks, for rounds that need a choice. */
+    others?: { id: number; title: string; artist: string }[];
+  }
 > = {
   '42': {
     title: 'French Touch',
     track: { id: 3135556, title: 'One More Time', artist: 'Daft Punk' },
   },
   '7': { title: '80s', track: { id: 1109731, title: 'Take On Me', artist: 'a-ha' } },
+  '9': {
+    title: 'Pop',
+    track: { id: 91, title: 'Thriller', artist: 'Michael Jackson' },
+    others: [
+      { id: 92, title: 'Beat It', artist: 'Michael Jackson' },
+      { id: 93, title: 'Billie Jean', artist: 'Michael Jackson' },
+    ],
+  },
 };
 
 const startFakeDeezer = async (): Promise<{ url: string; server: Server }> => {
@@ -48,15 +64,13 @@ const startFakeDeezer = async (): Promise<{ url: string; server: Server }> => {
       ? { error: { type: 'DataException', message: 'no data', code: 800 } }
       : tracks
         ? {
-            data: [
-              {
-                id: playlist.track.id,
-                title: playlist.track.title,
-                readable: true,
-                preview: preview(playlist.track.id),
-                artist: { name: playlist.track.artist },
-              },
-            ],
+            data: [playlist.track, ...(playlist.others ?? [])].map((track) => ({
+              id: track.id,
+              title: track.title,
+              readable: true,
+              preview: preview(track.id),
+              artist: { name: track.artist },
+            })),
           }
         : { id: Number(id), title: playlist.title };
     response.setHeader('content-type', 'application/json');
@@ -292,6 +306,117 @@ describe('blind test (HTTP + Socket.IO)', () => {
       ]) as unknown,
     });
   }, 10_000);
+
+  describe('easy rounds', () => {
+    const LABELS = [
+      'Michael Jackson – Beat It',
+      'Michael Jackson – Billie Jean',
+      'Michael Jackson – Thriller',
+    ];
+
+    const startEasyRound = async (rules: Partial<RoundRulesPayload> = {}) => {
+      const easy = round('9', 'everyone');
+      const { party, host } = await launchParty([
+        { ...easy, rules: { ...easy.rules, easyMode: true, ...rules } },
+      ]);
+      const player = await openSocket();
+      const joined = await player.emitWithAck('player:join', {
+        code: party.code,
+        playerName: 'Alice',
+      });
+      if (!joined.ok) throw new Error(joined.error.message);
+      const forPlayer = nextEvent(player, 'song:started');
+      const next = await host.emitWithAck('song:next');
+      if (!next.ok || next.data.kind !== 'song') throw new Error('expected a song');
+      return {
+        host,
+        player,
+        song: next.data.song,
+        forPlayer: await forPlayer,
+        joined: joined.data,
+      };
+    };
+
+    it('gives players the playlist as suggestions, but never the host nor the answer', async () => {
+      const { song, forPlayer } = await startEasyRound();
+
+      expect(forPlayer.suggestions.map((s) => s.label)).toEqual(LABELS);
+      // The song being played is one of them, and nothing says which.
+      expect(forPlayer.suggestions.map((s) => s.label)).toContain(`${song.artist} – ${song.title}`);
+      expect(JSON.stringify(forPlayer)).not.toMatch(/previewUrl|"title"|"artist"/);
+      expect(song.suggestions).toEqual([]);
+    });
+
+    it('gives them again to a player who reconnects', async () => {
+      const { joined } = await startEasyRound();
+      const back = await openSocket();
+      const rejoined = await back.emitWithAck('player:rejoin', {
+        gameId: joined.gameId,
+        playerId: joined.player.id,
+      });
+      expect(rejoined.ok && rejoined.data.currentSong?.suggestions.map((s) => s.label)).toEqual(
+        LABELS,
+      );
+    });
+
+    it('scores both parts, without bonus, for the right suggestion', async () => {
+      const { host, player, song, forPlayer } = await startEasyRound();
+      const right = forPlayer.suggestions.find((s) => s.label === `${song.artist} – ${song.title}`);
+
+      const answer = await player.emitWithAck('answer:submit', {
+        text: 'ignored',
+        suggestionId: right?.id ?? '',
+        clientSentAt: Date.now(),
+      });
+      expect(answer).toMatchObject({
+        ok: true,
+        data: { text: `${song.artist} – ${song.title}`, verdict: { title: true, artist: true } },
+      });
+
+      const revealed = await host.emitWithAck('song:reveal');
+      // "everyone" round: 2 + 2 points, no 1 point both-bonus, no up to 3 points speed bonus.
+      expect(revealed).toMatchObject({
+        ok: true,
+        data: { scoreboard: [expect.objectContaining({ playerName: 'Alice', points: 4 })] },
+      });
+    });
+
+    it('scores bonuses for a typed answer, as in any round', async () => {
+      const { host, player, song } = await startEasyRound();
+      await player.emitWithAck('answer:submit', {
+        text: `${song.artist} ${song.title}`,
+        clientSentAt: Date.now(),
+      });
+      const revealed = await host.emitWithAck('song:reveal');
+      expect(revealed.ok && revealed.data.scoreboard[0]?.points).toBeGreaterThan(5);
+    });
+
+    it('refuses a suggestion that does not exist', async () => {
+      const { player } = await startEasyRound();
+      expect(
+        await player.emitWithAck('answer:submit', {
+          text: 'x',
+          suggestionId: 'nope',
+          clientSentAt: Date.now(),
+        }),
+      ).toMatchObject({ ok: false, error: { code: 'UNKNOWN_SUGGESTION' } });
+    });
+
+    it('keeps the easy mode rule through the design', async () => {
+      const easy = round('9', 'everyone');
+      const { design, editToken } = (
+        await api<CreateGameDesignResponseDto>('POST', '/api/designs', { name: 'Party' })
+      ).body;
+      const saved = await api<GameDesignDto>(
+        'PUT',
+        `/api/designs/${design.id}`,
+        { name: 'Party', rounds: [{ ...easy, rules: { ...easy.rules, easyMode: true } }] },
+        editToken,
+      );
+      expect(saved.body.rounds[0]?.rules.easyMode).toBe(true);
+      expect(catalog.presets.classic.easyMode).toBe(false);
+    });
+  });
 
   it('plays a whole party: rounds, checked answers, corrections, reveals and final scores', async () => {
     const { party, host } = await launchParty([round('42', 'classic'), round('7', 'everyone')]);

@@ -38,7 +38,12 @@ export const usePlayerGame = (session: PlayerSession) => {
   useSocketEvent('game:recap', (recap) => dispatch({ type: 'recapReceived', recap }));
 
   const submitAnswer = useMutation({
-    mutationFn: (text: string) => gateway.submitAnswer({ text, clientSentAt: Date.now() }),
+    mutationFn: ({ text, suggestionId }: { text: string; suggestionId?: string }) =>
+      gateway.submitAnswer({
+        text,
+        clientSentAt: Date.now(),
+        ...(suggestionId && { suggestionId }),
+      }),
     onSuccess: (answer) => dispatch({ type: 'answerSent', answer }),
   });
 

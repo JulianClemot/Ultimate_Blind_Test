@@ -31,11 +31,12 @@ export interface GameDesignSnapshot {
     readonly type: RoundType;
     readonly playlistId: string;
     readonly playlistTitle: string | null;
-    /** `winnerCount`, `rankStep` and `teamMode` are absent in designs saved before those rules existed. */
-    readonly rules: Omit<RoundRulesProps, 'winnerCount' | 'rankStep' | 'teamMode'> & {
+    /** `winnerCount`, `rankStep`, `teamMode` and `easyMode` are absent in designs saved before those rules existed. */
+    readonly rules: Omit<RoundRulesProps, 'winnerCount' | 'rankStep' | 'teamMode' | 'easyMode'> & {
       readonly winnerCount?: number;
       readonly rankStep?: number;
       readonly teamMode?: boolean;
+      readonly easyMode?: boolean;
     };
   }[];
 }
@@ -82,6 +83,7 @@ export class GameDesign {
         winnerCount: 1,
         rankStep: 0,
         teamMode: false,
+        easyMode: false,
         ...round.rules,
       });
       if (!playlist.ok || !rules.ok) throw new Error(`Corrupted design ${snapshot.id}`);

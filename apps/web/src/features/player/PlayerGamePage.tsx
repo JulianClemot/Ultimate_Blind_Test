@@ -1,5 +1,4 @@
 import type { AnswerDto, SongDto } from '@ubt/shared';
-import { useState, type SubmitEvent } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 
@@ -9,53 +8,17 @@ import { findTeam, usesTeamMode } from '@/shared/lib/teams';
 import { formatCountdown } from '@/shared/lib/time';
 import { useCountdown } from '@/shared/lib/useCountdown';
 import { useSessionStore, type PlayerSession } from '@/shared/session/sessionStore';
-import { Button } from '@/shared/ui/button';
 import { Card, CardTitle } from '@/shared/ui/card';
 import { ErrorMessage } from '@/shared/ui/ErrorMessage';
-import { Input } from '@/shared/ui/input';
 import { PageLayout } from '@/shared/ui/PageLayout';
 import { Recap } from '@/shared/ui/Recap';
 import { GameOverview } from '@/shared/ui/GameOverview';
 import { Scoreboard } from '@/shared/ui/Scoreboard';
 import { TeamScoreboard } from '@/shared/ui/TeamScoreboard';
 
+import { AnswerForm } from './AnswerForm';
 import { foundParts } from './playerGameState';
 import { usePlayerGame } from './usePlayerGame';
-
-const AnswerForm = ({
-  onSubmit,
-  pending,
-}: {
-  onSubmit: (text: string) => void;
-  pending: boolean;
-}) => {
-  const { t } = useTranslation();
-  const [text, setText] = useState('');
-  const submit = (event: SubmitEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    onSubmit(text);
-    setText('');
-  };
-  return (
-    <form onSubmit={submit} className="flex flex-col gap-3">
-      <Input
-        aria-label={t('player.answerLabel')}
-        placeholder={t('player.answerPlaceholder')}
-        autoFocus
-        autoComplete="off"
-        autoCorrect="off"
-        autoCapitalize="off"
-        spellCheck={false}
-        enterKeyHint="send"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-      />
-      <Button type="submit" size="xl" disabled={!text.trim() || pending}>
-        {t('player.answer')}
-      </Button>
-    </form>
-  );
-};
 
 const Found = ({ label, found }: { label: string; found: boolean }) => (
   <span
@@ -175,7 +138,11 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
         )}
         {open && !hasAnswered && remaining !== 0 && (
           <>
-            <AnswerForm onSubmit={(t) => submitAnswer.mutate(t)} pending={submitAnswer.isPending} />
+            <AnswerForm
+              suggestions={song.suggestions}
+              onSubmit={(answer) => submitAnswer.mutate(answer)}
+              pending={submitAnswer.isPending}
+            />
             <ErrorMessage error={submitAnswer.error} />
           </>
         )}

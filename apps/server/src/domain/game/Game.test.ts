@@ -403,4 +403,145 @@ describe('Game', () => {
       });
     });
   });
+
+  describe('easy rounds', () => {
+    const tracks = [track('c'), track('a'), track('b')];
+
+    const easyGame = () => {
+      const rules = unwrap(
+        RoundRules.create({ ...ROUND_PRESETS.classic, songCount: 2, easyMode: true }),
+      );
+      game = unwrap(createGame([{ ...plan(2), rules }, plan(1)]));
+      unwrap(join('p1', 'Alice'));
+    };
+
+    const start = (songId: string, track: Track) =>
+      game.startSong({ songId, startedAt: T0, track, playlistTracks: tracks });
+
+    beforeEach(easyGame);
+
+    it('offers the tracks of the playlist as suggestions, alphabetically', () => {
+      unwrap(start('s1', track('b')));
+      expect(game.currentRound?.suggestions.map(({ id, label }) => ({ id, label }))).toEqual([
+        { id: 'a', label: 'Artist a – Title a' },
+        { id: 'b', label: 'Artist b – Title b' },
+        { id: 'c', label: 'Artist c – Title c' },
+      ]);
+    });
+
+    it('keeps the suggestions of the first song for the whole round', () => {
+      unwrap(start('s1', track('b')));
+      unwrap(game.revealSong(T0 + 1));
+      unwrap(
+        game.startSong({ songId: 's2', startedAt: T0, track: track('a'), playlistTracks: [] }),
+      );
+      expect(game.currentRound?.suggestions).toHaveLength(3);
+    });
+
+    it('turns a picked suggestion into an assisted answer', () => {
+      unwrap(start('s1', track('b')));
+      const right = unwrap(
+        game.submitAnswer({
+          answerId: 'a1',
+          playerId: 'p1',
+          text: 'ignored',
+          suggestionId: 'b',
+          receivedAt: T0 + 5,
+          clientSentAt: 0,
+        }),
+      );
+      expect(right).toMatchObject({
+        text: 'Artist b – Title b',
+        assisted: true,
+        verdict: { title: true, artist: true },
+      });
+    });
+
+    it('judges a wrong pick like any other answer', () => {
+      unwrap(start('s1', track('b')));
+      const wrong = unwrap(
+        game.submitAnswer({
+          answerId: 'a1',
+          playerId: 'p1',
+          text: '',
+          suggestionId: 'c',
+          receivedAt: T0 + 5,
+          clientSentAt: 0,
+        }),
+      );
+      expect(wrong).toMatchObject({ assisted: true, verdict: { title: false, artist: false } });
+    });
+
+    it('judges a pick exactly: a near-identical title is not the song', () => {
+      game = unwrap(
+        createGame([
+          {
+            ...plan(1),
+            rules: unwrap(RoundRules.create({ ...ROUND_PRESETS.classic, easyMode: true })),
+          },
+        ]),
+      );
+      unwrap(join('p1', 'Alice'));
+      const song: Track = { ...track('1'), title: 'Hello', artist: 'Adele' };
+      const lookalike: Track = { ...track('2'), title: 'Hella', artist: 'Adele' };
+      unwrap(
+        game.startSong({
+          songId: 's1',
+          startedAt: T0,
+          track: song,
+          playlistTracks: [song, lookalike],
+        }),
+      );
+      const pick = unwrap(
+        game.submitAnswer({
+          answerId: 'a1',
+          playerId: 'p1',
+          text: '',
+          suggestionId: '2',
+          receivedAt: T0 + 5,
+          clientSentAt: 0,
+        }),
+      );
+      expect(pick.verdict).toEqual({ title: false, artist: true });
+    });
+
+    it('refuses a suggestion the round does not offer', () => {
+      unwrap(start('s1', track('b')));
+      const result = game.submitAnswer({
+        answerId: 'a1',
+        playerId: 'p1',
+        text: 'x',
+        suggestionId: 'zzz',
+        receivedAt: T0 + 5,
+        clientSentAt: 0,
+      });
+      expect(!result.ok && result.error.code).toBe('UNKNOWN_SUGGESTION');
+    });
+
+    it('still takes typed answers, scored without assistance', () => {
+      unwrap(start('s1', track('b')));
+      expect(unwrap(answer('p1', T0 + 5, 'Artist b - Title b'))).toMatchObject({
+        assisted: false,
+        verdict: { title: true, artist: true },
+      });
+    });
+
+    it('offers nothing in a round that is not easy', () => {
+      unwrap(start('s1', track('b')));
+      unwrap(game.revealSong(T0 + 1));
+      unwrap(start('s2', track('a')));
+      unwrap(game.revealSong(T0 + 1));
+      unwrap(start('s3', track('c')));
+      expect(game.currentRound?.suggestions).toEqual([]);
+      const result = game.submitAnswer({
+        answerId: 'a1',
+        playerId: 'p1',
+        text: 'x',
+        suggestionId: 'a',
+        receivedAt: T0 + 5,
+        clientSentAt: 0,
+      });
+      expect(!result.ok && result.error.code).toBe('UNKNOWN_SUGGESTION');
+    });
+  });
 });

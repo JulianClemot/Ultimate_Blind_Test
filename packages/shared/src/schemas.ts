@@ -24,6 +24,8 @@ export const roundRulesSchema = z.object({
   playbackRate: z.number(),
   /** Absent from clients predating team mode. */
   teamMode: z.boolean().default(false),
+  /** Absent from clients predating easy mode. */
+  easyMode: z.boolean().default(false),
 });
 
 export const roundPlanPayloadSchema = z.object({
@@ -88,6 +90,8 @@ export const submitAnswerPayloadSchema = z.object({
   text: z.string(),
   /** Client wall-clock time (epoch ms) at submission, kept for diagnostics only. */
   clientSentAt: z.number(),
+  /** Id of a suggestion picked in an easy round: the server then ignores `text`. */
+  suggestionId: z.string().min(1).optional(),
 });
 export type SubmitAnswerPayload = z.infer<typeof submitAnswerPayloadSchema>;
 

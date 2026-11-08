@@ -56,6 +56,9 @@ export const describeRules = (rules: RoundRulesDto): string[] => {
   if (rules.teamMode) {
     lines.push(t('rules.teamRound'));
   }
+  if (rules.easyMode) {
+    lines.push(t('rules.easyMode'));
+  }
   if (asksTitle && asksArtist && rules.bothBonus > 0) {
     lines.push(t('rules.bothBonus', { points: points(rules.bothBonus) }));
   }

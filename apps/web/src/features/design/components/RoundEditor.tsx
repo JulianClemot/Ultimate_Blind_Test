@@ -138,6 +138,19 @@ export const RoundEditor = ({ round, index, count, catalog, dispatch }: RoundEdi
         </span>
       </label>
 
+      <label className="flex items-start gap-3 text-sm">
+        <input
+          type="checkbox"
+          className="mt-1 size-4"
+          checked={round.rules.easyMode}
+          onChange={(e) => dispatch({ type: 'easyModeChanged', key, easyMode: e.target.checked })}
+        />
+        <span className="flex flex-col">
+          <span className="font-medium">{t('design.easyMode')}</span>
+          <span className="text-xs text-muted-foreground">{t('design.easyModeHint')}</span>
+        </span>
+      </label>
+
       <details>
         <summary className="cursor-pointer text-sm font-medium">{t('design.rules')}</summary>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">

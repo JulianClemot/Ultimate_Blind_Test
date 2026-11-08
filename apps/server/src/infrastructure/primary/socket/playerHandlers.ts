@@ -66,6 +66,7 @@ export const registerPlayerHandlers = (
         playerId: session.playerId,
         text: input.value.text,
         clientSentAt: input.value.clientSentAt,
+        suggestionId: input.value.suggestionId,
       });
       return fromResult(result, ({ game, answer }) => toAnswerDto(game, answer));
     }),

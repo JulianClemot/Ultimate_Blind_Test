@@ -40,9 +40,17 @@ export interface RoundRulesProps {
    * always count; team scores only add up the points of team-mode rounds.
    */
   readonly teamMode: boolean;
+  /**
+   * Players get auto-completion from the tracks of the round's playlist. An answer picked from
+   * the suggestions earns the points of what it gets right, but no speed or both-parts bonus.
+   */
+  readonly easyMode: boolean;
 }
 
-type NumericRule = Exclude<keyof RoundRulesProps, 'scoring' | 'playbackRate' | 'teamMode'>;
+type NumericRule = Exclude<
+  keyof RoundRulesProps,
+  'scoring' | 'playbackRate' | 'teamMode' | 'easyMode'
+>;
 
 export const RULE_LIMITS: Readonly<Record<NumericRule, { min: number; max: number }>> = {
   winnerCount: { min: 1, max: 50 },
@@ -70,6 +78,7 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
     excerptSec: 30,
     playbackRate: 1,
     teamMode: false,
+    easyMode: false,
   },
   everyone: {
     scoring: 'everyone',
@@ -84,6 +93,7 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
     excerptSec: 30,
     playbackRate: 1,
     teamMode: false,
+    easyMode: false,
   },
   flash: {
     scoring: 'first',
@@ -98,6 +108,7 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
     excerptSec: 4,
     playbackRate: 1,
     teamMode: false,
+    easyMode: false,
   },
   'fast-forward': {
     scoring: 'first',
@@ -112,6 +123,7 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
     excerptSec: 30,
     playbackRate: 2,
     teamMode: false,
+    easyMode: false,
   },
 };
 
@@ -131,6 +143,7 @@ export class RoundRules implements RoundRulesProps {
   readonly excerptSec: number;
   readonly playbackRate: number;
   readonly teamMode: boolean;
+  readonly easyMode: boolean;
 
   private constructor(props: RoundRulesProps) {
     this.scoring = props.scoring;
@@ -145,6 +158,7 @@ export class RoundRules implements RoundRulesProps {
     this.excerptSec = props.excerptSec;
     this.playbackRate = props.playbackRate;
     this.teamMode = props.teamMode;
+    this.easyMode = props.easyMode;
   }
 
   static create(props: RoundRulesProps): Result<RoundRules, GameError> {
@@ -166,6 +180,9 @@ export class RoundRules implements RoundRulesProps {
     }
     if (typeof props.teamMode !== 'boolean') {
       return invalid('teamMode must be true or false');
+    }
+    if (typeof props.easyMode !== 'boolean') {
+      return invalid('easyMode must be true or false');
     }
     if (props.titlePoints === 0 && props.artistPoints === 0) {
       return invalid('A round must reward the title, the artist or both');
@@ -211,6 +228,7 @@ export class RoundRules implements RoundRulesProps {
       excerptSec: this.excerptSec,
       playbackRate: this.playbackRate,
       teamMode: this.teamMode,
+      easyMode: this.easyMode,
     };
   }
 }

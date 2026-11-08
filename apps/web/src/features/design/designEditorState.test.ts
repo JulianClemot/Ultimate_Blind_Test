@@ -271,3 +271,28 @@ describe('team mode', () => {
     expect(state.rounds[0]?.rules).toEqual({ ...catalog.presets.flash, teamMode: true });
   });
 });
+
+describe('easy mode', () => {
+  it('is off for new rounds and can be toggled per round', () => {
+    const state = run({ type: 'loaded', design }, add('r2'));
+    expect(state.rounds.map((r) => r.rules.easyMode)).toEqual([false, false]);
+
+    const toggled = designEditorReducer(state, {
+      type: 'easyModeChanged',
+      key: 'r2',
+      easyMode: true,
+    });
+    expect(toggled.rounds.map((r) => r.rules.easyMode)).toEqual([false, true]);
+    expect(toggled.dirty).toBe(true);
+    expect(toUpdatePayload(toggled).rounds.map((r) => r.rules.easyMode)).toEqual([false, true]);
+  });
+
+  it('survives a change of round type', () => {
+    const state = run(
+      { type: 'loaded', design },
+      { type: 'easyModeChanged', key: 'saved-0', easyMode: true },
+      { type: 'roundTypeChanged', key: 'saved-0', roundType: 'flash', catalog },
+    );
+    expect(state.rounds[0]?.rules).toEqual({ ...catalog.presets.flash, easyMode: true });
+  });
+});

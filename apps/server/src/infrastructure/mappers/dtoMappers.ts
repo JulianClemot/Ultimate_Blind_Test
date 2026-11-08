@@ -102,12 +102,15 @@ export const toSongDto = (game: Game, song: Song): SongDto => {
     asksTitle: song.rules.asks('title'),
     asksArtist: song.rules.asks('artist'),
     revealed: song.isRevealed,
+    // Only id and label: the structured title/artist stay server-side.
+    suggestions: (round?.suggestions ?? []).map(({ id, label }) => ({ id, label })),
   };
 };
 
 /** Only the audio leaves the server before the reveal: title and artist stay secret. */
 export const toHostSongDto = (game: Game, song: Song): HostSongDto => ({
   ...toSongDto(game, song),
+  suggestions: [],
   previewUrl: song.track.previewUrl,
   excerptSec: song.rules.excerptSec,
   playbackRate: song.rules.playbackRate,

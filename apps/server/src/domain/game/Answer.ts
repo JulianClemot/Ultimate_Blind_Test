@@ -15,4 +15,6 @@ export interface Answer {
   readonly verdict: Verdict;
   /** True once the host overruled the automatic verdict. */
   readonly judgedByHost: boolean;
+  /** Picked from the suggestions of an easy round: no speed or both-parts bonus. */
+  readonly assisted: boolean;
 }

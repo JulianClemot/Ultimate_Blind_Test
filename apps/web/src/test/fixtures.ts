@@ -21,6 +21,7 @@ const rules = (overrides: Partial<RoundRulesDto> = {}): RoundRulesDto => ({
   excerptSec: 30,
   playbackRate: 1,
   teamMode: false,
+  easyMode: false,
   ...overrides,
 });
 
@@ -58,6 +59,7 @@ export const hostSong = (overrides: Partial<HostSongDto> = {}): HostSongDto => (
   asksTitle: true,
   asksArtist: true,
   revealed: false,
+  suggestions: [],
   previewUrl: 'https://cdn.test/1.mp3',
   excerptSec: 30,
   playbackRate: 1,

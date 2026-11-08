@@ -54,6 +54,7 @@ export const en = {
     speedBonus: 'Speed bonus: up to +{{points}} for quick answers',
     excerpt: 'Only the first {{count}} s of each song are played',
     playbackRate: 'Songs are played at ×{{rate}} speed',
+    easyMode: 'Easy mode: suggestions appear as you type; picking one scores no bonus',
   },
   awards: {
     'fastest-finger': { title: 'Fastest finger', detail: '{{seconds}} s on average' },
@@ -95,6 +96,8 @@ export const en = {
     answerLabel: 'Your answer',
     answerPlaceholder: 'Artist – Title (one guess only!)',
     answer: 'Answer!',
+    suggestions: 'Suggestions',
+    pickedHint: 'Picked from the suggestions: no bonus points.',
     title: 'Title',
     artist: 'Artist',
     yourTeamLabel: 'Your team',
@@ -196,6 +199,9 @@ export const en = {
     teamMode: 'Team mode',
     teamModeHint:
       "Points scored in this round also count for the players' teams. You generate the teams in the lobby, right before the first song.",
+    easyMode: 'Easy mode',
+    easyModeHint:
+      'Players get suggestions from the playlist as they type. A suggestion they pick scores its points, but no speed or both-parts bonus.',
     rules: 'Rules',
     whoScores: 'Who scores',
     firstOnly: 'First players only',
@@ -240,6 +246,7 @@ export const en = {
     UNKNOWN_ANSWER: 'No such answer for the current song',
     EMPTY_DESIGN: 'Add at least one round before launching the game',
     TEAMS_LOCKED: 'Teams can only be generated before the first song',
+    UNKNOWN_SUGGESTION: 'No such suggestion for the current round',
     TEAMS_REQUIRED: 'Generate the teams before playing a team round',
   },
 };

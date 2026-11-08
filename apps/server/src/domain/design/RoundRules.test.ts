@@ -27,6 +27,7 @@ describe('RoundRules', () => {
     { titlePoints: 0, artistPoints: 0 },
     { scoring: 'random' as 'first' },
     { teamMode: 'yes' as unknown as boolean },
+    { easyMode: 'yes' as unknown as boolean },
   ])('rejects %o', (override) => {
     const result = RoundRules.create({ ...ROUND_PRESETS.classic, ...override });
     expect(!result.ok && result.error.code).toBe('INVALID_ROUND_RULES');

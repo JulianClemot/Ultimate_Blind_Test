@@ -104,3 +104,16 @@ describe('<RoundEditor /> team mode', () => {
     expect(dispatch).toHaveBeenCalledWith({ type: 'teamModeChanged', key: 'r1', teamMode: true });
   });
 });
+
+describe('<RoundEditor /> easy mode', () => {
+  it('is off by default and reflects a round saved in easy mode', () => {
+    setup();
+    expect(screen.getByRole('checkbox', { name: /Easy mode/ })).not.toBeChecked();
+  });
+
+  it('lets the host turn it on for this round', async () => {
+    const dispatch = setup();
+    await userEvent.click(screen.getByRole('checkbox', { name: /Easy mode/ }));
+    expect(dispatch).toHaveBeenCalledWith({ type: 'easyModeChanged', key: 'r1', easyMode: true });
+  });
+});

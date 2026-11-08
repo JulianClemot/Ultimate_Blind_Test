@@ -42,6 +42,13 @@ export interface StartSongCommand {
   readonly songId: string;
   readonly startedAt: Timestamp;
   readonly track: Track;
+  /** Every playable track of the round's playlist: the suggestions of an easy round. */
+  readonly playlistTracks?: readonly Track[];
+}
+
+export interface GameSubmitAnswerCommand extends SubmitAnswerCommand {
+  /** Id of the suggestion the player picked (easy rounds); `text` is then ignored. */
+  readonly suggestionId?: string | undefined;
 }
 
 export interface Score {
@@ -246,6 +253,7 @@ export class Game {
     if (!ready.ok) return ready;
     const round = this.upcomingRound;
     if (!round) return err(gameError('GAME_FINISHED', 'Every round has been played'));
+    round.captureSuggestions(command.playlistTracks ?? [command.track]);
     return ok(round.addSong(command.songId, command.startedAt, command.track));
   }
 
@@ -257,7 +265,7 @@ export class Game {
     return ok(undefined);
   }
 
-  submitAnswer(command: SubmitAnswerCommand): Result<Answer, GameError> {
+  submitAnswer({ suggestionId, ...command }: GameSubmitAnswerCommand): Result<Answer, GameError> {
     if (!this.players.has(command.playerId)) {
       return err(gameError('UNKNOWN_PLAYER', 'Player is not part of this game'));
     }
@@ -265,7 +273,13 @@ export class Game {
     if (!song || this.finished) {
       return err(gameError('NO_ACTIVE_SONG', 'No song is being played'));
     }
-    return song.submit(command);
+    if (suggestionId === undefined) return song.submit(command);
+
+    const suggestion = this.currentRound?.findSuggestion(suggestionId);
+    if (!suggestion) {
+      return err(gameError('UNKNOWN_SUGGESTION', 'No such suggestion for the current round'));
+    }
+    return song.submit({ ...command, text: suggestion.label, picked: suggestion });
   }
 
   revealSong(at: Timestamp): Result<Song, GameError> {

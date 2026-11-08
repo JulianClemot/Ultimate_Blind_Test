@@ -59,6 +59,8 @@ export const fr: Messages = {
     speedBonus: "Bonus de rapidité : jusqu'à +{{points}} pour les réponses rapides",
     excerpt: 'Seules les {{count}} premières secondes de chaque morceau sont jouées',
     playbackRate: 'Les morceaux sont joués à la vitesse ×{{rate}}',
+    easyMode:
+      'Mode facile : des suggestions apparaissent pendant la saisie ; en choisir une ne rapporte aucun bonus',
   },
   awards: {
     'fastest-finger': { title: 'Doigt le plus rapide', detail: '{{seconds}} s en moyenne' },
@@ -100,6 +102,8 @@ export const fr: Messages = {
     answerLabel: 'Votre réponse',
     answerPlaceholder: 'Artiste – Titre (une seule tentative !)',
     answer: 'Répondre !',
+    suggestions: 'Suggestions',
+    pickedHint: 'Choisi parmi les suggestions : aucun bonus.',
     title: 'Titre',
     artist: 'Artiste',
     yourTeamLabel: 'Votre équipe',
@@ -201,6 +205,9 @@ export const fr: Messages = {
     teamMode: 'Mode par équipes',
     teamModeHint:
       "Les points marqués pendant cette manche comptent aussi pour les équipes des joueurs. Vous générez les équipes dans le salon d'attente, juste avant le premier morceau.",
+    easyMode: 'Mode facile',
+    easyModeHint:
+      'Les joueurs reçoivent des suggestions issues de la playlist pendant la saisie. Une suggestion choisie rapporte ses points, mais aucun bonus de rapidité ni pour les deux.',
     rules: 'Règles',
     whoScores: 'Qui marque des points',
     firstOnly: 'Seulement les premiers joueurs',
@@ -248,6 +255,7 @@ export const fr: Messages = {
     UNKNOWN_ANSWER: 'Aucune réponse correspondante pour le morceau en cours',
     EMPTY_DESIGN: 'Ajoutez au moins une manche avant de lancer la partie',
     TEAMS_LOCKED: "Les équipes ne peuvent être générées qu'avant le premier morceau",
+    UNKNOWN_SUGGESTION: 'Aucune suggestion correspondante pour la manche en cours',
     TEAMS_REQUIRED: 'Générez les équipes avant de jouer une manche par équipes',
   },
 };

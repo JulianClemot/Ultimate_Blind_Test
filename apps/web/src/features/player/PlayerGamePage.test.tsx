@@ -55,6 +55,7 @@ describe('<PlayerGamePage />', () => {
           asksTitle: true,
           asksArtist: true,
           revealed: false,
+          suggestions: [],
         },
       }),
     );
@@ -76,6 +77,7 @@ describe('<PlayerGamePage />', () => {
       asksTitle: true,
       asksArtist: true,
       revealed: false,
+      suggestions: [],
     };
     const sent = answer({ songId: 's1' });
 

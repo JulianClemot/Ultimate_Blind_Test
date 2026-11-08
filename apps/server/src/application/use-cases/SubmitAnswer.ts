@@ -40,6 +40,7 @@ export class SubmitAnswer implements SubmitAnswerUseCase {
       text: command.text,
       receivedAt,
       clientSentAt: command.clientSentAt,
+      suggestionId: command.suggestionId,
     });
     if (!answer.ok) return answer;
 

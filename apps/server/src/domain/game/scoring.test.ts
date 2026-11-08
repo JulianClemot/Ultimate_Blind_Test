@@ -20,6 +20,12 @@ const answer = (playerId: string, elapsedMs: number, title: boolean, artist: boo
   clientSentAt: 0,
   verdict: { title, artist },
   judgedByHost: false,
+  assisted: false,
+});
+
+const assisted = (playerId: string, elapsedMs: number, title: boolean, artist: boolean) => ({
+  ...answer(playerId, elapsedMs, title, artist),
+  assisted: true,
 });
 
 const scores = (map: ReadonlyMap<string, number>) => Object.fromEntries(map);
@@ -195,5 +201,39 @@ describe('scoreSong', () => {
   it('ignores parts that are not asked', () => {
     const titleOnly = rules({ artistPoints: 0, bothBonus: 5 });
     expect(scores(scoreSong(titleOnly, [answer('alice', 0, true, true)]))).toEqual({ alice: 1 });
+  });
+
+  describe('assisted answers (picked from the suggestions of an easy round)', () => {
+    const bonuses = rules({
+      scoring: 'everyone',
+      titlePoints: 2,
+      artistPoints: 2,
+      bothBonus: 4,
+      speedBonus: 10,
+      answerTimeSec: 10,
+    });
+
+    it('score the points of both parts, without the speed or the both-parts bonus', () => {
+      const result = scoreSong(bonuses, [
+        answer('alice', 0, true, true),
+        assisted('bob', 0, true, true),
+      ]);
+      // alice: (2+10) + (2+10) + 4. bob: 2 + 2.
+      expect(scores(result)).toEqual({ alice: 28, bob: 4 });
+    });
+
+    it('still score only what the picked suggestion got right', () => {
+      const result = scoreSong(bonuses, [assisted('bob', 0, false, true)]);
+      expect(scores(result)).toEqual({ bob: 2 });
+    });
+
+    it('compete for places like any other answer', () => {
+      const first = rules({ scoring: 'first', titlePoints: 3, artistPoints: 0 });
+      const result = scoreSong(first, [
+        assisted('bob', 1_000, true, false),
+        answer('alice', 2_000, true, false),
+      ]);
+      expect(scores(result)).toEqual({ bob: 3 });
+    });
   });
 });
