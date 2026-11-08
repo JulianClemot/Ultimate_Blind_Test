@@ -11,3 +11,8 @@ coverage/
 
 # Local SQLite database
 apps/server/data/
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
