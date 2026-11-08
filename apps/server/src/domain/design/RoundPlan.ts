@@ -12,4 +12,9 @@ export interface RoundPlan {
   /** Display label remembered from the playlist check, if any. */
   readonly playlistTitle: string | null;
   readonly rules: RoundRules;
+  /**
+   * Corrections of the host to the film or series found for a track (by track id): a name, or
+   * null when the track is not from a film or series and must not be played in this round.
+   */
+  readonly sourceOverrides: Readonly<Record<string, string | null>>;
 }

@@ -6,7 +6,13 @@ import { formatElapsed } from '@/shared/lib/time';
 
 interface AnswerListProps {
   readonly answers: readonly AnswerDto[];
-  readonly asks?: { readonly title: boolean; readonly artist: boolean };
+  readonly asks?: {
+    readonly title: boolean;
+    readonly artist: boolean;
+    readonly source?: boolean;
+  };
+  /** Name of the film, series or game part of the verdict, when the round asks it. */
+  readonly sourceLabel?: string;
   /** When provided, verdicts become toggles letting the host correct them. */
   readonly onJudge?: (answer: AnswerDto, verdict: VerdictDto) => void;
 }
@@ -53,9 +59,13 @@ const OUTCOME_STYLE: Record<Outcome, { icon: string; className: string }> = {
 /** Overall result over the parts the round asks for. */
 const outcomeOf = (
   verdict: VerdictDto,
-  asks: { readonly title: boolean; readonly artist: boolean },
+  asks: { readonly title: boolean; readonly artist: boolean; readonly source?: boolean },
 ): Outcome => {
-  const asked = [...(asks.title ? [verdict.title] : []), ...(asks.artist ? [verdict.artist] : [])];
+  const asked = [
+    ...(asks.title ? [verdict.title] : []),
+    ...(asks.artist ? [verdict.artist] : []),
+    ...(asks.source ? [verdict.source] : []),
+  ];
   const right = asked.filter(Boolean).length;
   return right === 0 ? 'wrong' : right === asked.length ? 'correct' : 'partial';
 };
@@ -64,6 +74,7 @@ const outcomeOf = (
 export const AnswerList = ({
   answers,
   asks = { title: true, artist: true },
+  sourceLabel,
   onJudge,
 }: AnswerListProps) => {
   const { t } = useTranslation();
@@ -109,6 +120,16 @@ export const AnswerList = ({
                 onToggle={
                   onJudge &&
                   (() => onJudge(answer, { ...answer.verdict, artist: !answer.verdict.artist }))
+                }
+              />
+            )}
+            {asks.source && (
+              <VerdictToggle
+                label={sourceLabel ?? t('player.source')}
+                correct={answer.verdict.source}
+                onToggle={
+                  onJudge &&
+                  (() => onJudge(answer, { ...answer.verdict, source: !answer.verdict.source }))
                 }
               />
             )}

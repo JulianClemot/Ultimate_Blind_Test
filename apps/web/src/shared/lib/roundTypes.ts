@@ -6,6 +6,8 @@ export const ROUND_TYPES: readonly RoundTypeDto[] = [
   'everyone',
   'flash',
   'fast-forward',
+  'screen',
+  'game',
 ];
 
 /** Translated name and description of a round type (call it while rendering). */

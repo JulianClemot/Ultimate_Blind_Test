@@ -18,6 +18,7 @@ export class JudgeAnswer implements JudgeAnswerUseCase {
     const answer = game.value.judgeAnswer(command.answerId, {
       title: command.title,
       artist: command.artist,
+      source: command.source,
     });
     if (!answer.ok) return answer;
     await this.games.save(game.value);

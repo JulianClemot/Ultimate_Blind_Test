@@ -1,6 +1,6 @@
 import type { RoundRules } from '../design/RoundRules';
 import { matchAnswer, matchPick, type Verdict } from '../music/answerMatching';
-import type { Track } from '../music/Track';
+import type { Suggestion, Track } from '../music/Track';
 import { err, ok, type Result } from '../shared/Result';
 import type { Timestamp } from '../shared/Timestamp';
 import type { Answer } from './Answer';
@@ -14,7 +14,7 @@ export interface SubmitAnswerCommand {
   readonly receivedAt: Timestamp;
   readonly clientSentAt: Timestamp;
   /** Set when the text was picked from the suggestions of an easy round: judged exactly. */
-  readonly picked?: Pick<Track, 'title' | 'artist'>;
+  readonly picked?: Suggestion;
 }
 
 /** One track played within a round. Each player has a single guess. */

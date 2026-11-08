@@ -28,6 +28,9 @@ describe('RoundRules', () => {
     { scoring: 'random' as 'first' },
     { teamMode: 'yes' as unknown as boolean },
     { easyMode: 'yes' as unknown as boolean },
+    { sourcePoints: 2 },
+    { titlePoints: 0, artistPoints: 0, sourcePoints: 0 },
+    { titlePoints: 0, artistPoints: 0, sourcePoints: 101 },
   ])('rejects %o', (override) => {
     const result = RoundRules.create({ ...ROUND_PRESETS.classic, ...override });
     expect(!result.ok && result.error.code).toBe('INVALID_ROUND_RULES');
@@ -63,5 +66,30 @@ describe('RoundRules', () => {
     expect(titleOnly.ok && [titleOnly.value.asks('title'), titleOnly.value.asks('artist')]).toEqual(
       [true, false],
     );
+  });
+
+  describe('rounds about films and series', () => {
+    it('asks the film or series instead of the title and the artist', () => {
+      const rules = RoundRules.preset('screen');
+      expect(rules.asks('source')).toBe(true);
+      expect(rules.asks('title')).toBe(false);
+      expect(rules.asks('artist')).toBe(false);
+      expect(rules.pointsFor('source')).toBe(ROUND_PRESETS.screen.sourcePoints);
+    });
+
+    it('has a video game preset asking the game the same way', () => {
+      const rules = RoundRules.preset('game');
+      expect(rules.asks('source')).toBe(true);
+      expect(rules.asks('title')).toBe(false);
+    });
+
+    it('is not asked by the other presets', () => {
+      expect(RoundRules.preset('classic').asks('source')).toBe(false);
+    });
+
+    it('cannot mix the film or series with the title or the artist', () => {
+      const result = RoundRules.create({ ...ROUND_PRESETS.screen, titlePoints: 1 });
+      expect(!result.ok && result.error.code).toBe('INVALID_ROUND_RULES');
+    });
   });
 });

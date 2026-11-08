@@ -37,6 +37,7 @@ const plan = (songCount: number): RoundPlan => ({
       bothBonus: 0,
     }),
   ),
+  sourceOverrides: {},
 });
 
 type Move = readonly [
@@ -160,6 +161,7 @@ describe('game recap', () => {
         points: 1,
         foundTitle: true,
         foundArtist: false,
+        foundSource: false,
         foundAtMs: 2_000,
         wrongAttempts: 0,
       });
@@ -179,7 +181,7 @@ describe('game recap', () => {
       playSong([['alice', 3_000, 'miss']]);
       unwrap(game.finish());
 
-      unwrap(game.judgeAnswer('a1-0', { title: true, artist: true }));
+      unwrap(game.judgeAnswer('a1-0', { title: true, artist: true, source: false }));
 
       const recap = game.recap();
       expect(recap?.songs[0]?.results[0]).toMatchObject({

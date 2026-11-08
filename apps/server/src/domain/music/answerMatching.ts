@@ -1,9 +1,11 @@
-import type { Track } from './Track';
+import type { Suggestion, Track, TrackSource } from './Track';
 
 /** Which parts of the song an answer got right. */
 export interface Verdict {
   readonly title: boolean;
   readonly artist: boolean;
+  /** The film or series, in rounds that ask for it. */
+  readonly source: boolean;
 }
 
 const IGNORED_TOKENS = new Set(['the', 'a', 'an', 'le', 'la', 'les', 'l']);
@@ -92,25 +94,39 @@ const contains = (answer: readonly string[], target: readonly string[]): boolean
   );
 };
 
+/** Whether the answer names the film or series, under any of its accepted names. */
+const matchSource = (answer: readonly string[], source: TrackSource | undefined): boolean =>
+  source !== undefined &&
+  [source.name, ...source.aliases].some((name) => contains(answer, normalize(name)));
+
 export const matchAnswer = (text: string, track: Track): Verdict => {
   const answer = normalize(text);
   const titles = [track.title, cleanTitle(track.title)];
   return {
     title: titles.some((title) => contains(answer, normalize(title))),
     artist: artistNames(track.artist).some((name) => contains(answer, normalize(name))),
+    source: matchSource(answer, track.source),
   };
 };
 
 const same = (a: string, b: string): boolean => normalize(a).join(' ') === normalize(b).join(' ');
 
 /**
- * Verdict of a track picked from a list of suggestions. Picking is an exact choice, so, unlike
- * free text, there is no typo tolerance: "Hello" must not match "Hella".
+ * Verdict of a suggestion picked by the player. Picking is an exact choice, so, unlike free
+ * text, there is no typo tolerance: "Hello" must not match "Hella", nor "Frozen" "Frozen 2".
  */
-export const matchPick = (
-  picked: Pick<Track, 'title' | 'artist'>,
-  track: Pick<Track, 'title' | 'artist'>,
-): Verdict => ({
-  title: same(picked.title, track.title),
-  artist: same(picked.artist, track.artist),
-});
+export const matchPick = (picked: Suggestion, track: Track): Verdict => {
+  if (picked.kind === 'source') {
+    const names = track.source ? [track.source.name, ...track.source.aliases] : [];
+    return {
+      title: false,
+      artist: false,
+      source: names.some((name) => same(name, picked.source)),
+    };
+  }
+  return {
+    title: same(picked.title, track.title),
+    artist: same(picked.artist, track.artist),
+    source: false,
+  };
+};

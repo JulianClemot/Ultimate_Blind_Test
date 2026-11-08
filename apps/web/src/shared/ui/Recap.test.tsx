@@ -148,3 +148,34 @@ describe('<Recap />', () => {
     });
   });
 });
+
+describe('<Recap /> with films and series', () => {
+  it('names the film of a song and does not call a found film "title only"', async () => {
+    const recap = gameRecap();
+    const [first, ...others] = recap.songs;
+    if (!first) throw new Error('fixture');
+    const [alice, ...rest] = first.results;
+    render(
+      <Recap
+        recap={{
+          ...recap,
+          songs: [
+            {
+              ...first,
+              source: 'Frozen',
+              results: [{ ...alice!, foundTitle: false, foundSource: true }, ...rest],
+            },
+            ...others,
+          ],
+        }}
+      />,
+    );
+
+    const song = screen.getByText(/One More Time/).closest('details');
+    expect(song).toHaveTextContent('Frozen');
+    await userEvent.click(screen.getByText(/One More Time/));
+    const results = within(song as HTMLElement).getAllByRole('listitem');
+    expect(results[0]).toHaveTextContent('Alice');
+    expect(results[0]).not.toHaveTextContent(/title only|artist only/);
+  });
+});

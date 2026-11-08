@@ -97,7 +97,7 @@ const resultSummary = (result: PlayerSongResultDto): string[] => {
   if (result.foundAtMs === null) parts.push(i18n.t('recap.missed'));
   else {
     parts.push(seconds(result.foundAtMs));
-    if (result.foundTitle !== result.foundArtist) {
+    if (!result.foundSource && result.foundTitle !== result.foundArtist) {
       parts.push(i18n.t(result.foundTitle ? 'recap.titleOnly' : 'recap.artistOnly'));
     }
   }
@@ -118,6 +118,7 @@ const SongReplay = ({ recap }: { recap: GameRecapDto }) => {
             </span>{' '}
             <span className="font-semibold">{song.title}</span>
             <span> · {song.artist}</span>
+            {song.source && <span> · {song.source}</span>}
           </summary>
           <ul className="mt-2 flex flex-col divide-y divide-ink/20">
             {song.results.map((result) => (

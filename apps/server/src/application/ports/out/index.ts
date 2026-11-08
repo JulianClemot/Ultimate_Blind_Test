@@ -7,3 +7,4 @@ export type * from './IdGenerator';
 export type * from './MusicCatalog';
 export type * from './RandomGenerator';
 export type * from './Scheduler';
+export type * from './SourceResolver';

@@ -18,7 +18,7 @@ export const GameOverview = ({ rounds }: { rounds: readonly RoundSummaryDto[] })
             </p>
             <h3 className="text-lg font-semibold">{round.name || label}</h3>
             <ul className="mt-2 list-disc pl-5 text-sm">
-              {describeRules(round.rules).map((line) => (
+              {describeRules(round.rules, round.type).map((line) => (
                 <li key={line}>{line}</li>
               ))}
             </ul>

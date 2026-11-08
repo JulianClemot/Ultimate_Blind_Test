@@ -1,8 +1,10 @@
 import cors from '@fastify/cors';
+import Anthropic from '@anthropic-ai/sdk';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { Server } from 'socket.io';
 
 import {
+  AnalyzePlaylist,
   AttachHost,
   AutoRevealSong,
   CheckPlaylist,
@@ -15,6 +17,7 @@ import {
   JudgeAnswer,
   LaunchGame,
   NextSong,
+  PlaylistAnalyzer,
   RejoinGame,
   RevealSong,
   SubmitAnswer,
@@ -34,6 +37,8 @@ import { DeezerMusicCatalog } from './infrastructure/secondary/music/DeezerMusic
 import { InMemoryGameRepository } from './infrastructure/secondary/persistence/InMemoryGameRepository';
 import { SqliteGameDesignRepository } from './infrastructure/secondary/persistence/SqliteGameDesignRepository';
 import { CryptoRandomGenerator } from './infrastructure/secondary/random/CryptoRandomGenerator';
+import { ClaudeSourceResolver } from './infrastructure/secondary/sources/ClaudeSourceResolver';
+import { MetadataSourceResolver } from './infrastructure/secondary/sources/MetadataSourceResolver';
 import { SystemClock } from './infrastructure/secondary/time/SystemClock';
 import { SystemScheduler } from './infrastructure/secondary/time/SystemScheduler';
 
@@ -70,6 +75,17 @@ export const createAppServer = async (config: AppConfig): Promise<AppServer> => 
     http.log.error({ err: error }, 'scheduled task failed'),
   );
   const autoRevealSong = new AutoRevealSong(games, clock, events);
+  const anthropic = config.ANTHROPIC_API_KEY
+    ? new Anthropic({ apiKey: config.ANTHROPIC_API_KEY, timeout: 90_000 })
+    : undefined;
+  const sourceResolver = anthropic
+    ? new ClaudeSourceResolver(
+        (params) => anthropic.messages.create(params),
+        config.SOURCE_LOOKUP_MODEL ?? 'claude-opus-5-5',
+        (error) => http.log.warn({ err: error }, 'film and series lookup failed'),
+      )
+    : new MetadataSourceResolver();
+  const analyzer = new PlaylistAnalyzer(sourceResolver, catalog);
 
   const useCases = {
     createGameDesign: new CreateGameDesign(designs, ids, clock),
@@ -77,12 +93,13 @@ export const createAppServer = async (config: AppConfig): Promise<AppServer> => 
     updateGameDesign: new UpdateGameDesign(designs, clock, catalog),
     deleteGameDesign: new DeleteGameDesign(designs),
     checkPlaylist: new CheckPlaylist(catalog),
-    launchGame: new LaunchGame(designs, games, ids, codes, clock),
+    analyzePlaylist: new AnalyzePlaylist(designs, catalog, analyzer),
+    launchGame: new LaunchGame(designs, games, ids, codes, clock, analyzer),
     attachHost: new AttachHost(games),
     generateTeams: new GenerateTeams(games, random, events),
     joinGame: new JoinGame(games, ids, clock, events),
     rejoinGame: new RejoinGame(games),
-    nextSong: new NextSong(games, ids, clock, events, catalog, random),
+    nextSong: new NextSong(games, ids, clock, events, catalog, random, analyzer),
     revealSong: new RevealSong(games, clock, events),
     judgeAnswer: new JudgeAnswer(games, events),
     finishGame: new FinishGame(games, events),

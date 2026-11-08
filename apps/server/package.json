@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.6.0",
     "@fastify/cors": "^11.4.0",
     "@ubt/shared": "workspace:*",
     "fastify": "^5.12.8",

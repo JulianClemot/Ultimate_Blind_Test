@@ -8,7 +8,8 @@ export type ApplicationErrorCode =
   | 'NOT_DESIGN_OWNER'
   | 'PLAYLIST_NOT_FOUND'
   | 'PLAYLIST_EXHAUSTED'
-  | 'MUSIC_CATALOG_UNAVAILABLE';
+  | 'MUSIC_CATALOG_UNAVAILABLE'
+  | 'NO_SOURCE_TRACKS';
 
 export interface ApplicationFailure {
   readonly code: ApplicationErrorCode;

@@ -18,4 +18,5 @@ export const roundInput = (
   name: '',
   playlistTitle: null,
   rules: { ...ROUND_PRESETS[type], songCount },
+  sourceOverrides: {},
 });

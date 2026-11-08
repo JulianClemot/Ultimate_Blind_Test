@@ -6,6 +6,7 @@ import type {
   CreateGameDesignResponseDto,
   CreateGameResponseDto,
   GameDesignDto,
+  PlaylistAnalysisDto,
   PlaylistSummaryDto,
   RoundCatalogDto,
   RoundPlanPayload,
@@ -36,9 +37,9 @@ const PLAYLISTS: Record<
   string,
   {
     title: string;
-    track: { id: number; title: string; artist: string };
+    track: { id: number; title: string; artist: string; album?: string };
     /** More playable tracks, for rounds that need a choice. */
-    others?: { id: number; title: string; artist: string }[];
+    others?: { id: number; title: string; artist: string; album?: string }[];
   }
 > = {
   '42': {
@@ -46,6 +47,24 @@ const PLAYLISTS: Record<
     track: { id: 3135556, title: 'One More Time', artist: 'Daft Punk' },
   },
   '7': { title: '80s', track: { id: 1109731, title: 'Take On Me', artist: 'a-ha' } },
+  '55': {
+    title: 'Disney',
+    track: {
+      id: 551,
+      title: 'Let It Go',
+      artist: 'Idina Menzel',
+      album: 'Frozen (Original Motion Picture Soundtrack)',
+    },
+    others: [
+      {
+        id: 552,
+        title: 'Remember Me',
+        artist: 'Miguel',
+        album: 'Coco (Original Motion Picture Soundtrack)',
+      },
+      { id: 553, title: 'Roar', artist: 'Katy Perry', album: 'Prism' },
+    ],
+  },
   '9': {
     title: 'Pop',
     track: { id: 91, title: 'Thriller', artist: 'Michael Jackson' },
@@ -70,6 +89,7 @@ const startFakeDeezer = async (): Promise<{ url: string; server: Server }> => {
               readable: true,
               preview: preview(track.id),
               artist: { name: track.artist },
+              ...(track.album && { album: { title: track.album } }),
             })),
           }
         : { id: Number(id), title: playlist.title };
@@ -119,6 +139,7 @@ describe('blind test (HTTP + Socket.IO)', () => {
     playlist,
     playlistTitle: null,
     rules: { ...catalog.presets[type], songCount },
+    sourceOverrides: {},
   });
 
   /** Designs a game with the given rounds, launches it and attaches a host socket. */
@@ -204,6 +225,7 @@ describe('blind test (HTTP + Socket.IO)', () => {
           playlist: '42',
           playlistTitle: 'French Touch',
           rules: { ...catalog.presets.classic, songCount: 1 },
+          sourceOverrides: {},
         },
       ]);
 
@@ -306,6 +328,103 @@ describe('blind test (HTTP + Socket.IO)', () => {
       ]) as unknown,
     });
   }, 10_000);
+
+  describe('rounds about films and series', () => {
+    const screenRound = (overrides: Record<string, string | null> = {}): RoundPlanPayload => ({
+      ...round('55', 'classic'),
+      type: 'screen',
+      rules: { ...catalog.presets.screen, songCount: 1 },
+      sourceOverrides: overrides,
+    });
+
+    it('offers a "screen" preset asking the film instead of the title and artist', () => {
+      expect(catalog.presets.screen).toMatchObject({
+        titlePoints: 0,
+        artistPoints: 0,
+        sourcePoints: 2,
+      });
+    });
+
+    it('detects film music, from the album names when no language model is configured', async () => {
+      const { design, editToken } = (
+        await api<CreateGameDesignResponseDto>('POST', '/api/designs', { name: 'Party' })
+      ).body;
+      const analyze = (playlist: string, token = editToken) =>
+        api<PlaylistAnalysisDto>(
+          'GET',
+          `/api/playlists/analyze?playlist=${playlist}&designId=${design.id}`,
+          undefined,
+          token,
+        );
+
+      const disney = await analyze('55');
+      expect(disney.status).toBe(200);
+      expect(disney.body).toMatchObject({ id: '55', lookup: 'metadata', kind: 'movies' });
+      expect(disney.body.tracks.map((t) => [t.title, t.source?.name ?? null])).toEqual([
+        ['Let It Go', 'Frozen'],
+        ['Remember Me', 'Coco'],
+        ['Roar', null],
+      ]);
+
+      expect((await analyze('55', 'wrong')).status).toBe(403);
+      expect((await analyze('404')).status).toBe(404);
+    });
+
+    it('plays a film round: the host sees the film, players answer it and score', async () => {
+      const { party, host } = await launchParty([screenRound({ '553': null })]);
+      const player = await openSocket();
+      const joined = await player.emitWithAck('player:join', {
+        code: party.code,
+        playerName: 'Alice',
+      });
+      if (!joined.ok) throw new Error(joined.error.message);
+
+      const forPlayer = nextEvent(player, 'song:started');
+      const next = await host.emitWithAck('song:next');
+      if (!next.ok || next.data.kind !== 'song') throw new Error('expected a song');
+      const song = next.data.song;
+      expect(['Frozen', 'Coco']).toContain(song.source);
+      expect(song).toMatchObject({ asksSource: true, asksTitle: false, asksArtist: false });
+
+      // Players are told what is asked, never the answer.
+      const started = await forPlayer;
+      expect(started).toMatchObject({ asksSource: true, asksTitle: false });
+      expect(JSON.stringify(started)).not.toMatch(/Frozen|Coco|Let It Go|Remember Me/);
+
+      const answer = await player.emitWithAck('answer:submit', {
+        text: `it is ${song.source}`,
+        clientSentAt: Date.now(),
+      });
+      expect(answer).toMatchObject({ ok: true, data: { verdict: { source: true } } });
+
+      const revealed = await host.emitWithAck('song:reveal');
+      expect(revealed).toMatchObject({
+        ok: true,
+        data: { source: song.source, scoreboard: [expect.objectContaining({ points: 2 })] },
+      });
+    });
+
+    it('refuses to start a film round whose playlist has no known film', async () => {
+      const { host } = await launchParty([{ ...screenRound(), playlist: '9' }]);
+      expect(await host.emitWithAck('song:next')).toMatchObject({
+        ok: false,
+        error: { code: 'NO_SOURCE_TRACKS' },
+      });
+    });
+
+    it('keeps the corrections of the host with the design', async () => {
+      const { design, editToken } = (
+        await api<CreateGameDesignResponseDto>('POST', '/api/designs', { name: 'Party' })
+      ).body;
+      const saved = await api<GameDesignDto>(
+        'PUT',
+        `/api/designs/${design.id}`,
+        { name: 'Party', rounds: [screenRound({ '552': 'Encanto', '553': null })] },
+        editToken,
+      );
+      expect(saved.body.rounds[0]?.sourceOverrides).toEqual({ '552': 'Encanto', '553': null });
+    });
+  });
 
   describe('easy rounds', () => {
     const LABELS = [
@@ -507,13 +626,14 @@ describe('blind test (HTTP + Socket.IO)', () => {
       clientSentAt: Date.now(),
     });
     if (!wrong.ok) throw new Error(wrong.error.message);
-    expect(wrong.data.verdict).toEqual({ title: false, artist: false });
+    expect(wrong.data.verdict).toEqual({ title: false, artist: false, source: false });
     await host.emitWithAck('song:reveal');
 
     const judgedForPlayer = nextEvent(player, 'answer:judged');
     const scoresForPlayer = nextEvent(player, 'scoreboard:updated');
     const judged = await host.emitWithAck('answer:judge', {
       answerId: wrong.data.id,
+      source: false,
       title: true,
       artist: true,
     });
@@ -580,6 +700,7 @@ describe('blind test (HTTP + Socket.IO)', () => {
     const updatedRecap = nextEvent(player, 'game:recap');
     await host.emitWithAck('answer:judge', {
       answerId: wrong.data.id,
+      source: false,
       title: false,
       artist: false,
     });
@@ -776,7 +897,12 @@ describe('blind test (HTTP + Socket.IO)', () => {
       error: { code: 'NO_ACTIVE_SONG' },
     });
     expect(
-      await host.emitWithAck('answer:judge', { answerId: 'x', title: true, artist: true }),
+      await host.emitWithAck('answer:judge', {
+        answerId: 'x',
+        title: true,
+        artist: true,
+        source: false,
+      }),
     ).toMatchObject({
       ok: false,
       error: { code: 'NO_ACTIVE_SONG' },

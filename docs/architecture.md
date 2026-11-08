@@ -77,6 +77,25 @@ These rules are enforced by `pnpm depcruise` (`.dependency-cruiser.cjs`) in CI.
   answer `assisted`. Assisted answers score the points of the parts they get right but **no speed
   or both-parts bonus** (`scoreSong`); they still compete for places. Typed answers behave as in any
   round. An unknown id (or any id in a non-easy round) fails with `UNKNOWN_SUGGESTION`.
+- **Films, series and video games**: a round type `screen` (films and series) or `game` (video games), two presets of one mechanism (rule `sourcePoints`, asked **instead of** title and
+  artist: both must be 0, `RoundRules` refuses a mix) makes players name the film, TV series or video game a song
+  comes from; the type only changes the wording and which round the editor suggests. A `Track` may carry a `source` (`name`, accepted `aliases`, `medium`: `movie`, `series` or `game`); `Verdict` gains a
+  `source` part scored like the others (`scoreSong`). Free text is matched on the name and aliases
+  (`matchAnswer`, typo-tolerant); a picked suggestion is matched exactly (`matchPick`).
+  Where sources come from (`SourceResolver` port, never fails, degrades): `MetadataSourceResolver`
+  reads Deezer's own metadata (`extractSourceHint`: `(From "X")` in titles, `X (Original Motion Picture Soundtrack)`, `X (Original Video Game Soundtrack)` albums, compilations ignored); `ClaudeSourceResolver` (only with
+  `ANTHROPIC_API_KEY`) asks a Claude model in batches of 60 (cap 480 tracks per playlist), gives it
+  those hints, and merges: the model's answer wins, a hint is kept when it finds nothing, any failure
+  or refusal falls back to the hints (`lookup: 'metadata'`). `PlaylistAnalyzer` shares and caches one
+  lookup per playlist (in memory, lost on restart), classifies it (`classifyPlaylist`: movies /
+  series / games / mixed / music: a medium holding 80% of the tracks that have a source names the playlist) and is warmed by `LaunchGame`.
+  Hosts see it in the editor through `GET /api/playlists/analyze` (design edit token required: a
+  lookup costs money), which offers the `screen` round for film music and a per-track review. Their
+  corrections are stored with the round (`RoundPlan.sourceOverrides`, by Deezer track id: a name, or
+  null to leave the track out, `withOverrides`). `NextSong` only plays tracks with a source in such a
+  round (`NO_SOURCE_TRACKS` otherwise) and passes them to the game; the film name never reaches
+  players before the reveal (`RevealDto.source`). With `easyMode`, the suggestions of a `screen` round
+  are the distinct film and series names rather than tracks.
 - **Teams**: a round rule `teamMode` (off by default, stored with the design; designs saved before
   it existed restore with it off) makes the points of that round count for teams too. Individual
   scores always count; `Game.teamScoreboard()` only adds up team-mode rounds. In the lobby, the

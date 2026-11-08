@@ -90,4 +90,5 @@ export const playerGameReducer = (
 export const foundParts = (answers: readonly AnswerDto[]) => ({
   title: answers.some((a) => a.verdict.title),
   artist: answers.some((a) => a.verdict.artist),
+  source: answers.some((a) => a.verdict.source),
 });

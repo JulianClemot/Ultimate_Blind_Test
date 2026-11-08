@@ -7,6 +7,12 @@ import { findSuggestions } from '@/shared/lib/suggestions';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 
+const PLACEHOLDERS = {
+  song: 'player.answerPlaceholder',
+  screen: 'player.answerPlaceholderSource',
+  game: 'player.answerPlaceholderGame',
+} as const;
+
 export interface AnswerInput {
   readonly text: string;
   /** Set when the player picked a suggestion and did not edit it afterwards. */
@@ -16,6 +22,8 @@ export interface AnswerInput {
 interface AnswerFormProps {
   /** Easy rounds only: tracks proposed while the player types. */
   readonly suggestions: readonly SuggestionDto[];
+  /** What the round asks instead of the song: a film or series, or a video game. */
+  readonly source?: 'screen' | 'game';
   readonly onSubmit: (answer: AnswerInput) => void;
   readonly pending: boolean;
 }
@@ -25,7 +33,7 @@ interface AnswerFormProps {
  * Picking one only fills the field (the single guess is sent with the button); editing the text
  * afterwards makes it a free answer again.
  */
-export const AnswerForm = ({ suggestions, onSubmit, pending }: AnswerFormProps) => {
+export const AnswerForm = ({ suggestions, source, onSubmit, pending }: AnswerFormProps) => {
   const { t } = useTranslation();
   const listId = useId();
   const [text, setText] = useState('');
@@ -73,7 +81,7 @@ export const AnswerForm = ({ suggestions, onSubmit, pending }: AnswerFormProps) 
       <div className="relative">
         <Input
           aria-label={t('player.answerLabel')}
-          placeholder={t('player.answerPlaceholder')}
+          placeholder={t(PLACEHOLDERS[source ?? 'song'])}
           autoFocus
           autoComplete="off"
           autoCorrect="off"

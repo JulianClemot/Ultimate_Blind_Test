@@ -18,7 +18,7 @@ const answer = (playerId: string, elapsedMs: number, title: boolean, artist: boo
   receivedAt: 1_000 + elapsedMs,
   elapsedMs,
   clientSentAt: 0,
-  verdict: { title, artist },
+  verdict: { title, artist, source: false },
   judgedByHost: false,
   assisted: false,
 });
@@ -234,6 +234,24 @@ describe('scoreSong', () => {
         answer('alice', 2_000, true, false),
       ]);
       expect(scores(result)).toEqual({ bob: 3 });
+    });
+  });
+
+  describe('rounds about films and series', () => {
+    const screen = rules({ titlePoints: 0, artistPoints: 0, sourcePoints: 3 });
+    const found = (playerId: string, elapsedMs: number): Answer => ({
+      ...answer(playerId, elapsedMs, false, false),
+      verdict: { title: false, artist: false, source: true },
+    });
+
+    it('rewards the film or series only', () => {
+      const result = scoreSong(screen, [answer('bob', 1_000, true, true), found('alice', 2_000)]);
+      expect(scores(result)).toEqual({ alice: 3 });
+    });
+
+    it('gives no both-parts bonus for a single part', () => {
+      const bonus = rules({ titlePoints: 0, artistPoints: 0, sourcePoints: 3, bothBonus: 5 });
+      expect(scores(scoreSong(bonus, [found('alice', 1_000)]))).toEqual({ alice: 3 });
     });
   });
 });

@@ -9,6 +9,7 @@ const reveal = {
   songId: 's1',
   title: 'One More Time',
   artist: 'Daft Punk',
+  source: null,
   scoreboard: [],
   teamScoreboard: [],
 };
@@ -68,7 +69,10 @@ describe('hostGameReducer', () => {
     const state = hostGameReducer(playing, { type: 'answerReceived', answer: answer() });
     const judged = hostGameReducer(state, {
       type: 'answerJudged',
-      answer: answer({ verdict: { title: true, artist: false }, judgedByHost: true }),
+      answer: answer({
+        verdict: { title: true, artist: false, source: false },
+        judgedByHost: true,
+      }),
     });
     expect(judged?.answers[0]).toMatchObject({ judgedByHost: true, verdict: { title: true } });
   });

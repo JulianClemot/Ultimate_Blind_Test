@@ -8,7 +8,14 @@ import { z } from 'zod';
 
 // ── Game designs (HTTP) ─────────────────────────────────────────────────────
 
-export const roundTypeSchema = z.enum(['classic', 'everyone', 'flash', 'fast-forward']);
+export const roundTypeSchema = z.enum([
+  'classic',
+  'everyone',
+  'flash',
+  'fast-forward',
+  'screen',
+  'game',
+]);
 
 export const roundRulesSchema = z.object({
   scoring: z.enum(['first', 'everyone']),
@@ -17,6 +24,8 @@ export const roundRulesSchema = z.object({
   songCount: z.number(),
   titlePoints: z.number(),
   artistPoints: z.number(),
+  /** Absent from clients predating rounds about films and series. */
+  sourcePoints: z.number().default(0),
   bothBonus: z.number(),
   speedBonus: z.number(),
   answerTimeSec: z.number(),
@@ -36,6 +45,11 @@ export const roundPlanPayloadSchema = z.object({
   playlist: z.string().max(500),
   playlistTitle: z.string().max(200).nullable(),
   rules: roundRulesSchema,
+  /** Host corrections of the film or series of tracks (by track id); null excludes the track. */
+  sourceOverrides: z
+    .record(z.string().max(60), z.string().max(80).nullable())
+    .refine((overrides) => Object.keys(overrides).length <= 2000)
+    .default({}),
 });
 
 export const createGameDesignPayloadSchema = z.object({
@@ -52,6 +66,12 @@ export type RoundPlanPayload = z.infer<typeof roundPlanPayloadSchema>;
 
 export const checkPlaylistQuerySchema = z.object({
   playlist: z.string().trim().min(1).max(500),
+});
+
+export const analyzePlaylistQuerySchema = z.object({
+  playlist: z.string().trim().min(1).max(500),
+  /** The design being edited: only its owner (edit token) may spend a lookup. */
+  designId: z.string().min(1),
 });
 
 export const launchGamePayloadSchema = z.object({
@@ -99,5 +119,7 @@ export const judgeAnswerPayloadSchema = z.object({
   answerId: z.string().min(1),
   title: z.boolean(),
   artist: z.boolean(),
+  /** Absent from clients predating rounds about films and series. */
+  source: z.boolean().default(false),
 });
 export type JudgeAnswerPayload = z.infer<typeof judgeAnswerPayloadSchema>;

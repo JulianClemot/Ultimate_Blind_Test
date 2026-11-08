@@ -55,6 +55,7 @@ describe('<PlayerGamePage />', () => {
           asksTitle: true,
           asksArtist: true,
           revealed: false,
+          asksSource: false,
           suggestions: [],
         },
       }),
@@ -77,6 +78,7 @@ describe('<PlayerGamePage />', () => {
       asksTitle: true,
       asksArtist: true,
       revealed: false,
+      asksSource: false,
       suggestions: [],
     };
     const sent = answer({ songId: 's1' });
@@ -186,5 +188,61 @@ describe('<PlayerGamePage />', () => {
       expect(board).toHaveTextContent('1.The Funky Flamingos2 pts');
       expect(board).toHaveTextContent('2.The Neon Llamas0 pts');
     });
+  });
+});
+
+describe('<PlayerGamePage /> in a round about films and series', () => {
+  const song = {
+    id: 's1',
+    roundNumber: 1,
+    roundName: '',
+    roundType: 'screen' as const,
+    number: 1,
+    songCount: 2,
+    startedAt: Date.now(),
+    answerTimeSec: 30,
+    asksTitle: false,
+    asksArtist: false,
+    asksSource: true,
+    revealed: false,
+    suggestions: [],
+  };
+
+  beforeEach(() => {
+    useSessionStore.setState({ player: { gameId: 'g1', playerId: 'p1', playerName: 'Alice' } });
+  });
+
+  it('asks for the film, with its own progress badge', async () => {
+    renderPage(playerSession({ status: 'playing', currentSong: song }));
+
+    expect(await screen.findByPlaceholderText('Name of the film or series')).toBeInTheDocument();
+    expect(screen.getByText(/Film or series/, { selector: 'span' })).toHaveTextContent('?');
+    expect(screen.queryByText(/^Title/)).not.toBeInTheDocument();
+  });
+
+  it('shows the film at the reveal', async () => {
+    renderPage(
+      playerSession({
+        status: 'playing',
+        currentSong: { ...song, revealed: true },
+        reveal: {
+          songId: 's1',
+          title: 'Let It Go',
+          artist: 'Idina Menzel',
+          source: 'Frozen',
+          scoreboard: [],
+          teamScoreboard: [],
+        },
+      }),
+    );
+    expect(await screen.findByText('Let It Go')).toBeInTheDocument();
+    expect(screen.getByText('From Frozen')).toBeInTheDocument();
+  });
+
+  it('words a video game round with games', async () => {
+    renderPage(playerSession({ status: 'playing', currentSong: { ...song, roundType: 'game' } }));
+
+    expect(await screen.findByPlaceholderText('Name of the video game')).toBeInTheDocument();
+    expect(screen.getByText(/Video game/, { selector: 'span' })).toHaveTextContent('?');
   });
 });

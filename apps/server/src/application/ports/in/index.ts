@@ -9,6 +9,7 @@ import type {
   Song,
 } from '../../../domain';
 import type { UseCaseError } from '../../errors';
+import type { PlaylistAnalysis } from '../../services/PlaylistAnalyzer';
 import type { Playlist } from '../out/MusicCatalog';
 
 /** Driving ports: what primary adapters (HTTP, sockets…) are allowed to ask the core. */
@@ -42,6 +43,7 @@ export interface RoundPlanInput {
   readonly playlist: string;
   readonly playlistTitle: string | null;
   readonly rules: RoundRulesProps;
+  readonly sourceOverrides: Readonly<Record<string, string | null>>;
 }
 export interface UpdateGameDesignCommand extends DesignAccess {
   readonly name: string;
@@ -55,6 +57,11 @@ export interface CheckPlaylistCommand {
   readonly playlist: string;
 }
 export type CheckPlaylistUseCase = UseCase<CheckPlaylistCommand, Playlist>;
+
+export interface AnalyzePlaylistCommand extends DesignAccess {
+  readonly playlist: string;
+}
+export type AnalyzePlaylistUseCase = UseCase<AnalyzePlaylistCommand, PlaylistAnalysis>;
 
 // ── Parties ─────────────────────────────────────────────────────────────────
 
@@ -110,6 +117,7 @@ export interface JudgeAnswerCommand extends HostCommand {
   readonly answerId: string;
   readonly title: boolean;
   readonly artist: boolean;
+  readonly source: boolean;
 }
 export interface GameAnswer {
   readonly game: Game;

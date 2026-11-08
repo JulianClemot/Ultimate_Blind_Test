@@ -28,6 +28,8 @@ export interface EditorRound {
   /** Known after a successful check of the current `playlist`. */
   readonly playableTracks: number | null;
   readonly rules: RoundRulesDto;
+  /** Corrections of the host to the film or series of tracks (by track id); null leaves one out. */
+  readonly sourceOverrides: Readonly<Record<string, string | null>>;
 }
 
 export interface EditorState {
@@ -50,6 +52,9 @@ export type EditorAction =
   | { type: 'playbackRateChanged'; key: string; rate: number }
   | { type: 'teamModeChanged'; key: string; teamMode: boolean }
   | { type: 'easyModeChanged'; key: string; easyMode: boolean }
+  | { type: 'sourceOverridden'; key: string; trackId: string; name: string | null }
+  | { type: 'sourceOverrideReset'; key: string; trackId: string }
+  | { type: 'sourcesFilled'; key: string; trackIds: readonly string[]; name: string }
   | { type: 'playlistChanged'; key: string; playlist: string }
   | { type: 'playlistChecked'; key: string; playlist: string; summary: PlaylistSummaryDto }
   | { type: 'saved'; design: GameDesignDto };
@@ -67,6 +72,7 @@ const fromDesign = (design: GameDesignDto): EditorState => ({
     playlistTitle: round.playlistTitle,
     playableTracks: null,
     rules: round.rules,
+    sourceOverrides: round.sourceOverrides,
   })),
   dirty: false,
 });
@@ -107,6 +113,7 @@ export const designEditorReducer = (state: EditorState, action: EditorAction): E
             playlistTitle: state.rounds.at(-1)?.playlistTitle ?? null,
             playableTracks: state.rounds.at(-1)?.playableTracks ?? null,
             rules: action.catalog.presets[action.roundType],
+            sourceOverrides: {},
           },
         ],
       };
@@ -165,12 +172,34 @@ export const designEditorReducer = (state: EditorState, action: EditorAction): E
         ...round,
         rules: { ...round.rules, easyMode: action.easyMode },
       }));
+    case 'sourceOverridden':
+      return updateRound(state, action.key, (round) => ({
+        ...round,
+        sourceOverrides: { ...round.sourceOverrides, [action.trackId]: action.name },
+      }));
+    case 'sourcesFilled':
+      return updateRound(state, action.key, (round) => ({
+        ...round,
+        sourceOverrides: {
+          ...round.sourceOverrides,
+          ...Object.fromEntries(action.trackIds.map((trackId) => [trackId, action.name])),
+        },
+      }));
+    case 'sourceOverrideReset':
+      return updateRound(state, action.key, (round) => ({
+        ...round,
+        sourceOverrides: Object.fromEntries(
+          Object.entries(round.sourceOverrides).filter(([trackId]) => trackId !== action.trackId),
+        ),
+      }));
     case 'playlistChanged':
       return updateRound(state, action.key, (round) => ({
         ...round,
         playlist: action.playlist,
         playlistTitle: null,
         playableTracks: null,
+        // Track ids belong to the playlist: corrections of another playlist mean nothing.
+        sourceOverrides: {},
         name: round.nameIsAuto ? '' : round.name,
       }));
     case 'playlistChecked':
@@ -199,6 +228,7 @@ export const toUpdatePayload = (state: EditorState): UpdateGameDesignPayload => 
     playlist: round.playlist,
     playlistTitle: round.playlistTitle,
     rules: round.rules,
+    sourceOverrides: round.sourceOverrides,
   })),
 });
 
@@ -219,7 +249,11 @@ export const roundWarnings = (round: EditorRound): string[] => {
       warnings.push(t('design.warnNoPoints'));
     }
   }
-  if (round.rules.titlePoints === 0 && round.rules.artistPoints === 0) {
+  if (
+    round.rules.titlePoints === 0 &&
+    round.rules.artistPoints === 0 &&
+    round.rules.sourcePoints === 0
+  ) {
     warnings.push(t('design.warnNoScoring'));
   }
   return warnings;

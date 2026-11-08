@@ -102,3 +102,27 @@ describe('describeRules, easy mode', () => {
     expect(describeRules(catalog.presets.classic).join()).not.toMatch(/Easy mode/);
   });
 });
+
+describe('describeRules, video game rounds', () => {
+  it('asks the video game', () => {
+    expect(describeRules(catalog.presets.game, 'game')).toContain('Find the video game (2 points)');
+  });
+});
+
+describe('describeRules, film and series rounds', () => {
+  it('asks the film or series, not the title and the artist', () => {
+    const lines = describeRules(catalog.presets.screen);
+    expect(lines).toContain('Find the film or series (2 points)');
+    expect(lines.join()).not.toMatch(/title|artist/);
+  });
+
+  it('lists the points by place from the points of the film', () => {
+    const lines = describeRules({
+      ...catalog.presets.screen,
+      sourcePoints: 5,
+      winnerCount: 3,
+      rankStep: 2,
+    });
+    expect(lines).toContain('Points by place: 5, 3, 1');
+  });
+});

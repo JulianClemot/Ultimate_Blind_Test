@@ -1,6 +1,7 @@
 import type {
   CreateGameDesignResponseDto,
   GameDesignDto,
+  PlaylistAnalysisDto,
   PlaylistSummaryDto,
   RoundCatalogDto,
   UpdateGameDesignPayload,
@@ -28,6 +29,11 @@ export const designsApi = {
     httpClient.get<PlaylistSummaryDto>(
       `/api/playlists/check?playlist=${encodeURIComponent(playlist)}`,
     ),
+  analyzePlaylist: ({ designId, editToken }: DesignAccess, playlist: string) =>
+    httpClient.get<PlaylistAnalysisDto>(
+      `/api/playlists/analyze?playlist=${encodeURIComponent(playlist)}&designId=${designId}`,
+      { token: editToken },
+    ),
 };
 
 const designKey = (designId: string) => ['designs', designId] as const;
@@ -51,3 +57,13 @@ export const useSaveDesign = (access: DesignAccess) => {
 export const useDeleteDesign = () => useMutation({ mutationFn: designsApi.delete });
 
 export const useCheckPlaylist = () => useMutation({ mutationFn: designsApi.checkPlaylist });
+
+/** Films and series of a checked playlist. A lookup is slow and paid: asked once per playlist. */
+export const useAnalyzePlaylist = (access: DesignAccess, playlist: string, enabled: boolean) =>
+  useQuery({
+    queryKey: ['playlist-analysis', access.designId, playlist],
+    queryFn: () => designsApi.analyzePlaylist(access, playlist),
+    enabled,
+    staleTime: Infinity,
+    retry: false,
+  });

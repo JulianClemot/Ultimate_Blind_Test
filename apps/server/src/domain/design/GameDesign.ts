@@ -31,12 +31,18 @@ export interface GameDesignSnapshot {
     readonly type: RoundType;
     readonly playlistId: string;
     readonly playlistTitle: string | null;
-    /** `winnerCount`, `rankStep`, `teamMode` and `easyMode` are absent in designs saved before those rules existed. */
-    readonly rules: Omit<RoundRulesProps, 'winnerCount' | 'rankStep' | 'teamMode' | 'easyMode'> & {
+    /** Absent in designs saved before rounds could be about films and series. */
+    readonly sourceOverrides?: Readonly<Record<string, string | null>>;
+    /** `winnerCount`, `rankStep`, `teamMode`, `easyMode` and `sourcePoints` are absent in designs saved before those rules existed. */
+    readonly rules: Omit<
+      RoundRulesProps,
+      'winnerCount' | 'rankStep' | 'teamMode' | 'easyMode' | 'sourcePoints'
+    > & {
       readonly winnerCount?: number;
       readonly rankStep?: number;
       readonly teamMode?: boolean;
       readonly easyMode?: boolean;
+      readonly sourcePoints?: number;
     };
   }[];
 }
@@ -84,6 +90,7 @@ export class GameDesign {
         rankStep: 0,
         teamMode: false,
         easyMode: false,
+        sourcePoints: 0,
         ...round.rules,
       });
       if (!playlist.ok || !rules.ok) throw new Error(`Corrupted design ${snapshot.id}`);
@@ -93,6 +100,7 @@ export class GameDesign {
         playlist: playlist.value,
         playlistTitle: round.playlistTitle,
         rules: rules.value,
+        sourceOverrides: round.sourceOverrides ?? {},
       };
     });
     return new GameDesign(
@@ -148,6 +156,7 @@ export class GameDesign {
         type: round.type,
         playlistId: round.playlist.value,
         playlistTitle: round.playlistTitle,
+        sourceOverrides: round.sourceOverrides,
         rules: round.rules.toProps(),
       })),
     };

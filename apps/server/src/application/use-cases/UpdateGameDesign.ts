@@ -48,6 +48,7 @@ const toPlan = async (
     playlist: playlist.value,
     playlistTitle: blankToNull(input.playlistTitle),
     rules: rules.value,
+    sourceOverrides: input.sourceOverrides,
   });
 };
 

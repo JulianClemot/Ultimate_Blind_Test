@@ -8,6 +8,8 @@ import { renderWithRealtime } from '@/test/renderWithRealtime';
 import type { EditorRound } from '../designEditorState';
 import { RoundEditor } from './RoundEditor';
 
+const access = { designId: 'd1', editToken: 'tok' };
+
 const round = (rules: Partial<EditorRound['rules']> = {}): EditorRound => ({
   key: 'r1',
   name: '',
@@ -17,12 +19,20 @@ const round = (rules: Partial<EditorRound['rules']> = {}): EditorRound => ({
   playlistTitle: null,
   playableTracks: 100,
   rules: { ...catalog.presets.classic, ...rules },
+  sourceOverrides: {},
 });
 
 const setup = (rules?: Partial<EditorRound['rules']>) => {
   const dispatch = vi.fn();
   renderWithRealtime(
-    <RoundEditor round={round(rules)} index={0} count={1} catalog={catalog} dispatch={dispatch} />,
+    <RoundEditor
+      access={access}
+      round={round(rules)}
+      index={0}
+      count={1}
+      catalog={catalog}
+      dispatch={dispatch}
+    />,
   );
   return dispatch;
 };
@@ -63,6 +73,7 @@ describe('<RoundEditor /> winners', () => {
     ] as const) {
       const { unmount } = renderWithRealtime(
         <RoundEditor
+          access={access}
           round={round(rules)}
           index={0}
           count={1}

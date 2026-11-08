@@ -38,6 +38,12 @@ const SongProgress = ({ song, answers }: { song: SongDto; answers: readonly Answ
     <div className="flex gap-2">
       {song.asksTitle && <Found label={t('player.title')} found={found.title} />}
       {song.asksArtist && <Found label={t('player.artist')} found={found.artist} />}
+      {song.asksSource && (
+        <Found
+          label={t(song.roundType === 'game' ? 'player.game' : 'player.source')}
+          found={found.source}
+        />
+      )}
     </div>
   );
 };
@@ -140,6 +146,7 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
           <>
             <AnswerForm
               suggestions={song.suggestions}
+              {...(song.asksSource && { source: song.roundType === 'game' ? 'game' : 'screen' })}
               onSubmit={(answer) => submitAnswer.mutate(answer)}
               pending={submitAnswer.isPending}
             />
@@ -155,6 +162,11 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
             <p className="text-sm text-muted-foreground">{t('common.itWas')}</p>
             <p className="text-2xl font-bold">{state.reveal.title}</p>
             <p className="text-lg">{state.reveal.artist}</p>
+            {state.reveal.source && (
+              <p className="text-sm text-muted-foreground">
+                {t('common.from', { source: state.reveal.source })}
+              </p>
+            )}
           </div>
         )}
       </Card>

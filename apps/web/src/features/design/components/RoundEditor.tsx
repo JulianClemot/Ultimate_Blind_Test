@@ -2,6 +2,7 @@ import type { NumericRuleDto, RoundCatalogDto, RoundTypeDto } from '@ubt/shared'
 import type { Dispatch } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { DesignAccess } from '@/shared/api/designsApi';
 import { roundTypeInfo, ROUND_TYPES } from '@/shared/lib/roundTypes';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -11,8 +12,11 @@ import { Select } from '@/shared/ui/select';
 
 import { roundWarnings, type EditorAction, type EditorRound } from '../designEditorState';
 import { PlaylistField } from './PlaylistField';
+import { SourceReview } from './SourceReview';
 
 interface RoundEditorProps {
+  /** Whose design this is: films and series lookups are reserved to its owner. */
+  readonly access: DesignAccess;
   readonly round: EditorRound;
   readonly index: number;
   readonly count: number;
@@ -27,9 +31,17 @@ const NUMERIC_RULES: readonly { rule: NumericRuleDto; label: string; hint?: stri
   { rule: 'excerptSec', label: 'excerpt', hint: 'excerptHint' },
   { rule: 'titlePoints', label: 'titlePoints', hint: 'titlePointsHint' },
   { rule: 'artistPoints', label: 'artistPoints', hint: 'artistPointsHint' },
+  { rule: 'sourcePoints', label: 'sourcePoints', hint: 'sourcePointsHint' },
   { rule: 'bothBonus', label: 'bothBonus' },
   { rule: 'speedBonus', label: 'speedBonus', hint: 'speedBonusHint' },
 ];
+
+/** A round asks the film or series, or the title and the artist: the other points are hidden. */
+const shownRule = (rule: NumericRuleDto, asksSource: boolean): boolean => {
+  if (rule === 'sourcePoints') return asksSource;
+  if (rule === 'titlePoints' || rule === 'artistPoints' || rule === 'bothBonus') return !asksSource;
+  return true;
+};
 
 const RuleInput = ({
   rule,
@@ -49,8 +61,16 @@ const RuleInput = ({
   />
 );
 
-export const RoundEditor = ({ round, index, count, catalog, dispatch }: RoundEditorProps) => {
+export const RoundEditor = ({
+  access,
+  round,
+  index,
+  count,
+  catalog,
+  dispatch,
+}: RoundEditorProps) => {
   const { t } = useTranslation();
+  const asksSource = round.rules.sourcePoints > 0;
   const key = round.key;
   const warnings = roundWarnings(round);
   return (
@@ -125,6 +145,8 @@ export const RoundEditor = ({ round, index, count, catalog, dispatch }: RoundEdi
         }
       />
 
+      <SourceReview access={access} round={round} catalog={catalog} dispatch={dispatch} />
+
       <label className="flex items-start gap-3 text-sm">
         <input
           type="checkbox"
@@ -193,15 +215,19 @@ export const RoundEditor = ({ round, index, count, catalog, dispatch }: RoundEdi
               ))}
             </Select>
           </Field>
-          {NUMERIC_RULES.map(({ rule, label, hint }) => (
-            <Field
-              key={rule}
-              label={t(`design.${label}`)}
-              {...(hint ? { hint: t(`design.${hint}`) } : {})}
-            >
-              <RuleInput rule={rule} round={round} catalog={catalog} dispatch={dispatch} />
-            </Field>
-          ))}
+          {NUMERIC_RULES.filter(({ rule }) => shownRule(rule, asksSource)).map(
+            ({ rule, label, hint }) => (
+              <Field
+                key={rule}
+                label={t(
+                  `design.${label === 'sourcePoints' && round.type === 'game' ? 'gamePoints' : label}`,
+                )}
+                {...(hint ? { hint: t(`design.${hint}`) } : {})}
+              >
+                <RuleInput rule={rule} round={round} catalog={catalog} dispatch={dispatch} />
+              </Field>
+            ),
+          )}
         </div>
       </details>
 

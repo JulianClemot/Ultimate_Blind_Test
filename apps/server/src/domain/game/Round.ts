@@ -1,4 +1,5 @@
 import type { RoundPlan } from '../design/RoundPlan';
+import { normalize } from '../music/answerMatching';
 import { trackLabel, type Suggestion, type Track } from '../music/Track';
 import type { Timestamp } from '../shared/Timestamp';
 import { Song } from './Song';
@@ -31,20 +32,15 @@ export class Round {
   }
 
   /**
-   * Keeps the playlist's tracks as suggestions, once, when the round starts. Does nothing
-   * unless the round is easy. Nothing tells which track is the song being played.
+   * Keeps what players can pick from, once, when the round starts. Does nothing unless the round
+   * is easy. The tracks of the playlist, or, in rounds about films and series, their names.
+   * Nothing tells which one is the song being played.
    */
   captureSuggestions(tracks: readonly Track[]): void {
     if (!this.plan.rules.easyMode || this.suggestionList) return;
-    const byId = new Map(tracks.map((track) => [track.id, track]));
-    this.suggestionList = [...byId.values()]
-      .map(({ id, title, artist }): Suggestion => ({
-        id,
-        label: trackLabel({ title, artist }),
-        title,
-        artist,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+    this.suggestionList = (
+      this.plan.rules.asks('source') ? sourceSuggestions(tracks) : trackSuggestions(tracks)
+    ).sort((a, b) => a.label.localeCompare(b.label));
   }
 
   listSongs(): readonly Song[] {
@@ -64,3 +60,28 @@ export class Round {
     return song;
   }
 }
+
+const trackSuggestions = (tracks: readonly Track[]): Suggestion[] => {
+  const byId = new Map(tracks.map((track) => [track.id, track]));
+  return [...byId.values()].map(({ id, title, artist }): Suggestion => ({
+    id,
+    kind: 'track',
+    label: trackLabel({ title, artist }),
+    title,
+    artist,
+  }));
+};
+
+const sourceSuggestions = (tracks: readonly Track[]): Suggestion[] => {
+  const byKey = new Map<string, string>();
+  for (const { source } of tracks) {
+    const key = source ? normalize(source.name).join(' ') : '';
+    if (key && !byKey.has(key)) byKey.set(key, source?.name ?? key);
+  }
+  return [...byKey].map(([id, label]): Suggestion => ({
+    id,
+    kind: 'source',
+    label,
+    source: label,
+  }));
+};

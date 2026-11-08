@@ -23,6 +23,7 @@ const design: GameDesignDto = {
       playlist: '42',
       playlistTitle: '80s',
       rules: catalog.presets.classic,
+      sourceOverrides: {},
     },
   ],
   updatedAt: 1,
@@ -199,6 +200,7 @@ describe('designEditorReducer', () => {
           playlist: '42',
           playlistTitle: '80s',
           rules: catalog.presets.classic,
+          sourceOverrides: {},
         },
       ],
     });
@@ -294,5 +296,68 @@ describe('easy mode', () => {
       { type: 'roundTypeChanged', key: 'saved-0', roundType: 'flash', catalog },
     );
     expect(state.rounds[0]?.rules).toEqual({ ...catalog.presets.flash, easyMode: true });
+  });
+});
+
+describe('film and series corrections', () => {
+  const corrected = (...actions: EditorAction[]) => run({ type: 'loaded', design }, ...actions);
+  const overrides = (state: EditorState) => state.rounds[0]?.sourceOverrides;
+
+  it('are kept per track, sent with the design, and dirty the editor', () => {
+    const state = corrected(
+      { type: 'sourceOverridden', key: 'saved-0', trackId: '7', name: 'Frozen' },
+      { type: 'sourceOverridden', key: 'saved-0', trackId: '8', name: null },
+    );
+    expect(overrides(state)).toEqual({ '7': 'Frozen', '8': null });
+    expect(state.dirty).toBe(true);
+    expect(toUpdatePayload(state).rounds[0]?.sourceOverrides).toEqual({ '7': 'Frozen', '8': null });
+  });
+
+  it('can be filled for many tracks at once, keeping the others', () => {
+    const state = corrected(
+      { type: 'sourceOverridden', key: 'saved-0', trackId: '9', name: 'Cars' },
+      { type: 'sourcesFilled', key: 'saved-0', trackIds: ['7', '8'], name: 'Celeste' },
+    );
+    expect(overrides(state)).toEqual({ '7': 'Celeste', '8': 'Celeste', '9': 'Cars' });
+    expect(state.dirty).toBe(true);
+  });
+
+  it('can be reset one by one', () => {
+    const state = corrected(
+      { type: 'sourceOverridden', key: 'saved-0', trackId: '7', name: 'Frozen' },
+      { type: 'sourceOverridden', key: 'saved-0', trackId: '8', name: null },
+      { type: 'sourceOverrideReset', key: 'saved-0', trackId: '7' },
+    );
+    expect(overrides(state)).toEqual({ '8': null });
+  });
+
+  it('are dropped when the playlist changes: track ids belong to a playlist', () => {
+    const state = corrected(
+      { type: 'sourceOverridden', key: 'saved-0', trackId: '7', name: 'Frozen' },
+      { type: 'playlistChanged', key: 'saved-0', playlist: '99' },
+    );
+    expect(overrides(state)).toEqual({});
+  });
+
+  it('survive a change of round type', () => {
+    const state = corrected(
+      { type: 'sourceOverridden', key: 'saved-0', trackId: '7', name: 'Frozen' },
+      { type: 'roundTypeChanged', key: 'saved-0', roundType: 'screen', catalog },
+    );
+    expect(overrides(state)).toEqual({ '7': 'Frozen' });
+    expect(state.rounds[0]?.rules.sourcePoints).toBeGreaterThan(0);
+  });
+
+  it('a round asking the film needs no title or artist points to be launchable', () => {
+    const state = corrected({
+      type: 'roundTypeChanged',
+      key: 'saved-0',
+      roundType: 'screen',
+      catalog,
+    });
+    const [round] = state.rounds;
+    expect(round && roundWarnings(round)).not.toContain(
+      'Give points for the title, the artist or both.',
+    );
   });
 });

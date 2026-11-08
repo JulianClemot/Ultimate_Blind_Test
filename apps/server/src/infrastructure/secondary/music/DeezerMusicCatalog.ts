@@ -29,6 +29,7 @@ const pageSchema = z.union([
         readable: z.boolean().optional(),
         preview: z.string().optional(),
         artist: z.object({ name: z.string() }).optional(),
+        album: z.object({ title: z.string() }).optional(),
       }),
     ),
     next: z.string().optional(),
@@ -108,6 +109,7 @@ export class DeezerMusicCatalog implements MusicCatalog {
           title: item.title,
           artist: item.artist?.name ?? '',
           previewUrl: item.preview,
+          ...(item.album?.title && { album: item.album.title }),
         });
       }
       if (!next || data.length === 0) break;

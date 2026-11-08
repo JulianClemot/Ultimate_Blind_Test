@@ -30,6 +30,7 @@ export interface PlayerSongResult {
   readonly points: number;
   readonly foundTitle: boolean;
   readonly foundArtist: boolean;
+  readonly foundSource: boolean;
   /** Time (ms after the song started) of the first correct answer; null when never found. */
   readonly foundAtMs: number | null;
   /** Answers that were correct for no part the song asks. */
@@ -44,6 +45,8 @@ export interface SongRecap {
   readonly number: number;
   readonly title: string;
   readonly artist: string;
+  /** Film or series the track comes from, when known. */
+  readonly source: string | null;
   /** Players who found the song first (fastest), then the others by name. */
   readonly results: readonly PlayerSongResult[];
 }
@@ -87,7 +90,8 @@ const rank = (totals: readonly PlayerTotal[]): Standing[] => {
 
 const isCorrect = (song: Song, answer: Answer): boolean =>
   (song.rules.asks('title') && answer.verdict.title) ||
-  (song.rules.asks('artist') && answer.verdict.artist);
+  (song.rules.asks('artist') && answer.verdict.artist) ||
+  (song.rules.asks('source') && answer.verdict.source);
 
 const resultOf = (song: Song, player: Player): PlayerSongResult => {
   const answers = song.answersOf(player.id);
@@ -96,6 +100,7 @@ const resultOf = (song: Song, player: Player): PlayerSongResult => {
     points: song.points().get(player.id) ?? 0,
     foundTitle: song.rules.asks('title') && answers.some((a) => a.verdict.title),
     foundArtist: song.rules.asks('artist') && answers.some((a) => a.verdict.artist),
+    foundSource: song.rules.asks('source') && answers.some((a) => a.verdict.source),
     foundAtMs: answers.find((a) => isCorrect(song, a))?.elapsedMs ?? null,
     wrongAttempts: answers.filter((a) => !isCorrect(song, a)).length,
   };
@@ -209,6 +214,7 @@ export const buildRecap = (
         number: song.number,
         title: song.track.title,
         artist: song.track.artist,
+        source: song.track.source?.name ?? null,
         results: [...(results[s] ?? [])].sort(byFindTimeThenName),
       };
     }),

@@ -97,6 +97,7 @@ const DesignEditor = ({ saved, catalog }: { saved: SavedDesign; catalog: RoundCa
       {state.rounds.map((round, index) => (
         <RoundEditor
           key={round.key}
+          access={access}
           round={round}
           index={index}
           count={state.rounds.length}

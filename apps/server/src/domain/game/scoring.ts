@@ -1,7 +1,7 @@
 import type { RoundRules } from '../design/RoundRules';
 import type { Answer } from './Answer';
 
-const TARGETS = ['title', 'artist'] as const;
+const TARGETS = ['title', 'artist', 'source'] as const;
 type Target = (typeof TARGETS)[number];
 
 const speedPoints = (rules: RoundRules, elapsedMs: number): number =>
@@ -15,7 +15,7 @@ const speedPoints = (rules: RoundRules, elapsedMs: number): number =>
  *   `winnerCount` players (1 = the fastest only). Each place pays `rankStep` points less than
  *   the previous one.
  * - `everyone`: each player's earliest correct answer for a part scores.
- * Speed bonus applies per part found; the both-bonus goes to players credited with both parts.
+ * Speed bonus applies per part found; the both-bonus goes to players credited with every asked part.
  * Neither bonus depends on the place. Assisted answers (picked from an easy round's
  * suggestions) earn the points of the parts they get right, but neither bonus.
  */
@@ -47,10 +47,10 @@ export const scoreSong = (
     }
   }
 
-  if (targets.length === 2 && rules.bothBonus > 0) {
+  if (targets.length >= 2 && rules.bothBonus > 0) {
     const assisted = new Set(answers.filter((a) => a.assisted).map((a) => a.playerId));
     for (const [playerId, parts] of credited) {
-      if (parts.size === 2 && !assisted.has(playerId))
+      if (parts.size === targets.length && !assisted.has(playerId))
         points.set(playerId, (points.get(playerId) ?? 0) + rules.bothBonus);
     }
   }

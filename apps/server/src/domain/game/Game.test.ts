@@ -28,6 +28,7 @@ const plan = (songCount: number, type: RoundType = 'classic'): RoundPlan => ({
   name: 'Warm-up',
   playlistTitle: null,
   rules: unwrap(RoundRules.create({ ...ROUND_PRESETS[type], songCount })),
+  sourceOverrides: {},
 });
 
 describe('Game', () => {
@@ -157,7 +158,7 @@ describe('Game', () => {
       expect(result).toMatchObject({
         songId: song.id,
         elapsedMs: 1234.5,
-        verdict: { title: true, artist: true },
+        verdict: { title: true, artist: true, source: false },
         judgedByHost: false,
       });
     });
@@ -207,14 +208,19 @@ describe('Game', () => {
       const wrong = unwrap(answer('p1', T0 + 1, 'close enough'));
       expect(game.scoreboard({ revealedOnly: false })[0]?.points).toBe(0);
 
-      const judged = unwrap(game.judgeAnswer(wrong.id, { title: true, artist: false }));
+      const judged = unwrap(
+        game.judgeAnswer(wrong.id, { title: true, artist: false, source: false }),
+      );
 
-      expect(judged).toMatchObject({ verdict: { title: true, artist: false }, judgedByHost: true });
+      expect(judged).toMatchObject({
+        verdict: { title: true, artist: false, source: false },
+        judgedByHost: true,
+      });
       expect(game.scoreboard({ revealedOnly: false })[0]).toMatchObject({
         player: { id: 'p1' },
         points: ROUND_PRESETS.classic.titlePoints,
       });
-      expect(game.judgeAnswer('nope', { title: true, artist: true })).toMatchObject({
+      expect(game.judgeAnswer('nope', { title: true, artist: true, source: false })).toMatchObject({
         ok: false,
         error: { code: 'UNKNOWN_ANSWER' },
       });
@@ -453,7 +459,7 @@ describe('Game', () => {
       expect(right).toMatchObject({
         text: 'Artist b – Title b',
         assisted: true,
-        verdict: { title: true, artist: true },
+        verdict: { title: true, artist: true, source: false },
       });
     });
 
@@ -502,7 +508,7 @@ describe('Game', () => {
           clientSentAt: 0,
         }),
       );
-      expect(pick.verdict).toEqual({ title: false, artist: true });
+      expect(pick.verdict).toEqual({ title: false, artist: true, source: false });
     });
 
     it('refuses a suggestion the round does not offer', () => {
@@ -522,7 +528,7 @@ describe('Game', () => {
       unwrap(start('s1', track('b')));
       expect(unwrap(answer('p1', T0 + 5, 'Artist b - Title b'))).toMatchObject({
         assisted: false,
-        verdict: { title: true, artist: true },
+        verdict: { title: true, artist: true, source: false },
       });
     });
 
@@ -542,6 +548,90 @@ describe('Game', () => {
         clientSentAt: 0,
       });
       expect(!result.ok && result.error.code).toBe('UNKNOWN_SUGGESTION');
+    });
+  });
+
+  describe('rounds about films and series', () => {
+    const frozenSong: Track = {
+      ...track('f1'),
+      source: { name: 'Frozen', aliases: ['La Reine des Neiges'], medium: 'movie' },
+    };
+    const sequel: Track = {
+      ...track('f2'),
+      source: { name: 'Frozen 2', aliases: [], medium: 'movie' },
+    };
+    const tangled: Track = {
+      ...track('f3'),
+      source: { name: 'Tangled', aliases: [], medium: 'movie' },
+    };
+
+    const screenGame = (easyMode = false) => {
+      const rules = unwrap(RoundRules.create({ ...ROUND_PRESETS.screen, songCount: 2, easyMode }));
+      game = unwrap(createGame([{ ...plan(2), type: 'screen', rules }]));
+      unwrap(join('p1', 'Alice'));
+      return game.startSong({
+        songId: 's1',
+        startedAt: T0,
+        track: frozenSong,
+        playlistTracks: [frozenSong, sequel, tangled, track('plain')],
+      });
+    };
+
+    const pick = (suggestionId: string) =>
+      game.submitAnswer({
+        answerId: 'a1',
+        playerId: 'p1',
+        text: '',
+        suggestionId,
+        receivedAt: T0 + 5,
+        clientSentAt: 0,
+      });
+
+    it('checks free text against the film and its aliases', () => {
+      unwrap(screenGame());
+      expect(unwrap(answer('p1', T0 + 5, 'la reine des neiges')).verdict).toEqual({
+        title: false,
+        artist: false,
+        source: true,
+      });
+    });
+
+    it('proposes the distinct names of the films, never a track without one', () => {
+      unwrap(screenGame(true));
+      expect(game.currentRound?.suggestions.map(({ label }) => label)).toEqual([
+        'Frozen',
+        'Frozen 2',
+        'Tangled',
+      ]);
+    });
+
+    it('judges a picked film exactly: Frozen 2 is not Frozen', () => {
+      unwrap(screenGame(true));
+      const wrong = unwrap(pick('frozen 2'));
+      expect(wrong).toMatchObject({ assisted: true, verdict: { source: false } });
+    });
+
+    it('credits the right pick, without bonus', () => {
+      unwrap(screenGame(true));
+      expect(unwrap(pick('frozen'))).toMatchObject({
+        text: 'Frozen',
+        assisted: true,
+        verdict: { source: true },
+      });
+      unwrap(game.revealSong(T0 + 10));
+      expect(game.scoreboard({ revealedOnly: true })[0]?.points).toBe(
+        ROUND_PRESETS.screen.sourcePoints,
+      );
+    });
+
+    it('shows the film in the recap', () => {
+      unwrap(screenGame());
+      unwrap(answer('p1', T0 + 5, 'Frozen'));
+      unwrap(game.revealSong(T0 + 10));
+      unwrap(game.finish());
+      const recap = game.recap();
+      expect(recap?.songs[0]).toMatchObject({ source: 'Frozen' });
+      expect(recap?.songs[0]?.results[0]).toMatchObject({ foundSource: true, foundAtMs: 5 });
     });
   });
 });

@@ -14,6 +14,7 @@ export * from './game/Song';
 export * from './game/Team';
 export * from './music/answerMatching';
 export * from './music/PlaylistId';
+export * from './music/screenSource';
 export * from './music/Track';
 export * from './shared/Result';
 export * from './shared/Timestamp';

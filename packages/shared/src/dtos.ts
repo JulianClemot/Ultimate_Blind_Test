@@ -2,7 +2,7 @@
 
 // ── Game designs ────────────────────────────────────────────────────────────
 
-export type RoundTypeDto = 'classic' | 'everyone' | 'flash' | 'fast-forward';
+export type RoundTypeDto = 'classic' | 'everyone' | 'flash' | 'fast-forward' | 'screen' | 'game';
 export type ScoringDto = 'first' | 'everyone';
 
 export interface RoundRulesDto {
@@ -14,6 +14,8 @@ export interface RoundRulesDto {
   readonly songCount: number;
   readonly titlePoints: number;
   readonly artistPoints: number;
+  /** Points for finding the film or series; asked instead of the title and the artist. */
+  readonly sourcePoints: number;
   readonly bothBonus: number;
   readonly speedBonus: number;
   readonly answerTimeSec: number;
@@ -46,6 +48,8 @@ export interface RoundPlanDto {
   readonly playlist: string;
   readonly playlistTitle: string | null;
   readonly rules: RoundRulesDto;
+  /** Host corrections of the film or series of tracks (by track id); null excludes the track. */
+  readonly sourceOverrides: Readonly<Record<string, string | null>>;
 }
 
 export interface GameDesignDto {
@@ -65,6 +69,27 @@ export interface PlaylistSummaryDto {
   readonly id: string;
   readonly title: string;
   readonly playableTracks: number;
+}
+
+export type SourceMediumDto = 'movie' | 'series' | 'game';
+/** What a playlist is made of, detected from its tracks. */
+export type PlaylistKindDto = 'movies' | 'series' | 'games' | 'mixed' | 'music';
+
+export interface AnalyzedTrackDto {
+  readonly id: string;
+  readonly title: string;
+  readonly artist: string;
+  /** Film or series found for the track; null when it is not from one (or unknown). */
+  readonly source: { readonly name: string; readonly medium: SourceMediumDto } | null;
+}
+
+export interface PlaylistAnalysisDto {
+  readonly id: string;
+  readonly title: string;
+  readonly kind: PlaylistKindDto;
+  /** `ai`: tracks were looked up by a language model; `metadata`: only Deezer's album and titles. */
+  readonly lookup: 'ai' | 'metadata';
+  readonly tracks: readonly AnalyzedTrackDto[];
 }
 
 // ── Parties ─────────────────────────────────────────────────────────────────
@@ -128,6 +153,7 @@ export interface SongDto {
   readonly answerTimeSec: number;
   readonly asksTitle: boolean;
   readonly asksArtist: boolean;
+  readonly asksSource: boolean;
   readonly revealed: boolean;
   /**
    * Easy rounds: every track of the playlist, alphabetical, the current one among them
@@ -148,12 +174,16 @@ export interface HostSongDto extends SongDto {
   /** Only for the host, to give oral clues. Never sent to players before the reveal. */
   readonly title: string;
   readonly artist: string;
+  /** Film or series of the track, when known. */
+  readonly source: string | null;
 }
 
 export interface RevealDto {
   readonly songId: string;
   readonly title: string;
   readonly artist: string;
+  /** Film or series of the track, when known. */
+  readonly source: string | null;
   /** Scores of revealed songs only. */
   readonly scoreboard: readonly ScoreDto[];
   /** Empty until teams are generated. */
@@ -168,6 +198,7 @@ export interface AllAnsweredDto {
 export interface VerdictDto {
   readonly title: boolean;
   readonly artist: boolean;
+  readonly source: boolean;
 }
 
 export interface AnswerDto {
@@ -220,6 +251,7 @@ export interface PlayerSongResultDto {
   readonly points: number;
   readonly foundTitle: boolean;
   readonly foundArtist: boolean;
+  readonly foundSource: boolean;
   /** ms after the song started, null when never found. */
   readonly foundAtMs: number | null;
   readonly wrongAttempts: number;
@@ -232,6 +264,7 @@ export interface SongRecapDto {
   readonly number: number;
   readonly title: string;
   readonly artist: string;
+  readonly source: string | null;
   /** Who found the song first, then the others. */
   readonly results: readonly PlayerSongResultDto[];
 }

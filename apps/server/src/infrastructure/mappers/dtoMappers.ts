@@ -3,6 +3,7 @@ import type {
   GameDesignDto,
   GameRecapDto,
   GameSnapshotDto,
+  PlaylistAnalysisDto,
   HostSongDto,
   PlayerDto,
   PlayerSessionDto,
@@ -16,7 +17,7 @@ import type {
   TeamScoreDto,
 } from '@ubt/shared';
 
-import type { PlayerSession, Playlist } from '../../application';
+import type { PlayerSession, Playlist, PlaylistAnalysis } from '../../application';
 import type {
   Answer,
   Game,
@@ -37,6 +38,7 @@ export const toRoundPlanDto = (plan: RoundPlan): RoundPlanDto => ({
   playlist: plan.playlist.value,
   playlistTitle: plan.playlistTitle,
   rules: plan.rules.toProps(),
+  sourceOverrides: plan.sourceOverrides,
 });
 
 export const toGameDesignDto = (design: GameDesign): GameDesignDto => ({
@@ -44,6 +46,27 @@ export const toGameDesignDto = (design: GameDesign): GameDesignDto => ({
   name: design.name,
   rounds: design.rounds.map(toRoundPlanDto),
   updatedAt: design.updatedAt,
+});
+
+export const toPlaylistAnalysisDto = ({
+  playlist,
+  kind,
+  lookup,
+  sources,
+}: PlaylistAnalysis): PlaylistAnalysisDto => ({
+  id: playlist.id,
+  title: playlist.title,
+  kind,
+  lookup,
+  tracks: playlist.tracks.map((track) => {
+    const source = sources.get(track.id);
+    return {
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      source: source ? { name: source.name, medium: source.medium } : null,
+    };
+  }),
 });
 
 export const toPlaylistSummaryDto = (playlist: Playlist): PlaylistSummaryDto => ({
@@ -101,6 +124,7 @@ export const toSongDto = (game: Game, song: Song): SongDto => {
     answerTimeSec: song.rules.answerTimeSec,
     asksTitle: song.rules.asks('title'),
     asksArtist: song.rules.asks('artist'),
+    asksSource: song.rules.asks('source'),
     revealed: song.isRevealed,
     // Only id and label: the structured title/artist stay server-side.
     suggestions: (round?.suggestions ?? []).map(({ id, label }) => ({ id, label })),
@@ -111,6 +135,7 @@ export const toSongDto = (game: Game, song: Song): SongDto => {
 export const toHostSongDto = (game: Game, song: Song): HostSongDto => ({
   ...toSongDto(game, song),
   suggestions: [],
+  source: song.track.source?.name ?? null,
   previewUrl: song.track.previewUrl,
   excerptSec: song.rules.excerptSec,
   playbackRate: song.rules.playbackRate,
@@ -122,6 +147,7 @@ export const toRevealDto = (game: Game, song: Song): RevealDto => ({
   songId: song.id,
   title: song.track.title,
   artist: song.track.artist,
+  source: song.track.source?.name ?? null,
   scoreboard: toPublicScoreboard(game),
   teamScoreboard: toPublicTeamScoreboard(game),
 });

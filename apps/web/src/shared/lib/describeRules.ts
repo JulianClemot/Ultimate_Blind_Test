@@ -1,4 +1,4 @@
-import type { RoundRulesDto } from '@ubt/shared';
+import type { RoundRulesDto, RoundTypeDto } from '@ubt/shared';
 import { t } from 'i18next';
 
 /** The preview Deezer provides is 30 s long: playing all of it is not worth mentioning. */
@@ -19,12 +19,19 @@ const pointsByPlace = (base: number, rules: RoundRulesDto): string => {
 const points = (count: number) => t('rules.points', { count });
 
 /** Rules of a round as short sentences players can read in the lobby. */
-export const describeRules = (rules: RoundRulesDto): string[] => {
+export const describeRules = (rules: RoundRulesDto, roundType?: RoundTypeDto): string[] => {
   const asksTitle = rules.titlePoints > 0;
   const asksArtist = rules.artistPoints > 0;
+  const asksSource = rules.sourcePoints > 0;
   const lines = [t('rules.songsAndTime', { count: rules.songCount, time: rules.answerTimeSec })];
 
-  if (asksTitle && asksArtist) {
+  if (asksSource) {
+    lines.push(
+      t(roundType === 'game' ? 'rules.findGame' : 'rules.findSource', {
+        source: points(rules.sourcePoints),
+      }),
+    );
+  } else if (asksTitle && asksArtist) {
     lines.push(
       t('rules.findBoth', { title: points(rules.titlePoints), artist: points(rules.artistPoints) }),
     );
@@ -49,7 +56,10 @@ export const describeRules = (rules: RoundRulesDto): string[] => {
             artist: pointsByPlace(rules.artistPoints, rules),
           })
         : t('rules.placesOne', {
-            list: pointsByPlace(asksTitle ? rules.titlePoints : rules.artistPoints, rules),
+            list: pointsByPlace(
+              asksSource ? rules.sourcePoints : asksTitle ? rules.titlePoints : rules.artistPoints,
+              rules,
+            ),
           }),
     );
   }

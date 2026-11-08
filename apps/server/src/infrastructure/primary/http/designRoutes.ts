@@ -1,4 +1,5 @@
 import {
+  analyzePlaylistQuerySchema,
   checkPlaylistQuerySchema,
   createGameDesignPayloadSchema,
   updateGameDesignPayloadSchema,
@@ -8,6 +9,7 @@ import {
 import type { FastifyInstance } from 'fastify';
 
 import type {
+  AnalyzePlaylistUseCase,
   CheckPlaylistUseCase,
   CreateGameDesignUseCase,
   DeleteGameDesignUseCase,
@@ -15,7 +17,11 @@ import type {
   UpdateGameDesignUseCase,
 } from '../../../application';
 import { GameDesign, PLAYBACK_RATES, ROUND_PRESETS, RULE_LIMITS } from '../../../domain';
-import { toGameDesignDto, toPlaylistSummaryDto } from '../../mappers/dtoMappers';
+import {
+  toGameDesignDto,
+  toPlaylistAnalysisDto,
+  toPlaylistSummaryDto,
+} from '../../mappers/dtoMappers';
 import { bearerToken, parseOr400, sendResult } from './httpHelpers';
 
 export interface DesignRoutesUseCases {
@@ -24,6 +30,7 @@ export interface DesignRoutesUseCases {
   readonly updateGameDesign: UpdateGameDesignUseCase;
   readonly deleteGameDesign: DeleteGameDesignUseCase;
   readonly checkPlaylist: CheckPlaylistUseCase;
+  readonly analyzePlaylist: AnalyzePlaylistUseCase;
 }
 
 interface DesignParams {
@@ -47,6 +54,18 @@ export const registerDesignRoutes = (
     const query = parseOr400(checkPlaylistQuerySchema, request.query, reply);
     if (!query) return reply;
     return sendResult(reply, await useCases.checkPlaylist.execute(query), toPlaylistSummaryDto);
+  });
+
+  /** Film and series lookup: slow and paid, hence reserved to the owner of a design. */
+  app.get('/api/playlists/analyze', async (request, reply) => {
+    const query = parseOr400(analyzePlaylistQuerySchema, request.query, reply);
+    if (!query) return reply;
+    const result = await useCases.analyzePlaylist.execute({
+      designId: query.designId,
+      editToken: bearerToken(request),
+      playlist: query.playlist,
+    });
+    return sendResult(reply, result, toPlaylistAnalysisDto);
   });
 
   app.post('/api/designs', async (request, reply) => {

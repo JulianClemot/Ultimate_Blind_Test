@@ -41,6 +41,7 @@ const HostPeek = ({ song }: { song: HostSongDto }) => {
     >
       {visible ? (
         <span className="font-medium">
+          {song.source && `${song.source} · `}
           {song.artist} – {song.title}
         </span>
       ) : (
@@ -122,6 +123,11 @@ export const SongPanel = ({
           <p className="text-sm text-muted-foreground">{t('common.itWas')}</p>
           <p className="text-2xl font-bold">{reveal.title}</p>
           <p className="text-lg">{reveal.artist}</p>
+          {reveal.source && (
+            <p className="text-sm text-muted-foreground">
+              {t('common.from', { source: reveal.source })}
+            </p>
+          )}
         </div>
       )}
 

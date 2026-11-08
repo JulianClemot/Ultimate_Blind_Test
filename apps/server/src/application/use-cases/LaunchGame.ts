@@ -8,6 +8,7 @@ import type {
   GameRepository,
   IdGenerator,
 } from '../ports/out';
+import type { PlaylistAnalyzer } from '../services/PlaylistAnalyzer';
 import { loadOwnedDesign } from './access';
 
 /** Starts a party from a design: players can join with the code until the host plays a song. */
@@ -20,6 +21,7 @@ export class LaunchGame implements LaunchGameUseCase {
     private readonly ids: IdGenerator,
     private readonly codes: GameCodeGenerator,
     private readonly clock: Clock,
+    private readonly analyzer?: PlaylistAnalyzer,
   ) {}
 
   async execute(access: DesignAccess): Promise<Result<LaunchedGame, UseCaseError>> {
@@ -41,6 +43,8 @@ export class LaunchGame implements LaunchGameUseCase {
     });
     if (!game.ok) return game;
     await this.games.save(game.value);
+    // Film and series lookups take a while: start them now rather than at the first song.
+    this.analyzer?.warmUp(design.value.rounds);
     return ok({ game: game.value, hostToken });
   }
 

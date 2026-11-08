@@ -1,12 +1,22 @@
 import { gameError, type GameError } from '../game/GameErrors';
 import { err, ok, type Result } from '../shared/Result';
 
-export const ROUND_TYPES = ['classic', 'everyone', 'flash', 'fast-forward'] as const;
+export const ROUND_TYPES = [
+  'classic',
+  'everyone',
+  'flash',
+  'fast-forward',
+  'screen',
+  'game',
+] as const;
 export type RoundType = (typeof ROUND_TYPES)[number];
 
 export const SCORINGS = ['first', 'everyone'] as const;
 /** `first`: only the fastest correct player scores; `everyone`: every correct player scores. */
 export type Scoring = (typeof SCORINGS)[number];
+
+/** A part of a song players can be asked to find. */
+export type Target = 'title' | 'artist' | 'source';
 
 export const PLAYBACK_RATES = [1, 1.25, 1.5, 2] as const;
 
@@ -27,6 +37,11 @@ export interface RoundRulesProps {
   readonly titlePoints: number;
   /** Points for finding the artist (0 = artist not asked). */
   readonly artistPoints: number;
+  /**
+   * Points for finding the film or series the song comes from (0 = not asked). Asked instead of
+   * the title and the artist: when above 0, those two must be 0.
+   */
+  readonly sourcePoints: number;
   /** Extra points for a player credited with both title and artist. */
   readonly bothBonus: number;
   /** Extra points for an instant answer, decreasing linearly to 0 at the end of the answer time. */
@@ -58,6 +73,7 @@ export const RULE_LIMITS: Readonly<Record<NumericRule, { min: number; max: numbe
   songCount: { min: 1, max: 50 },
   titlePoints: { min: 0, max: 100 },
   artistPoints: { min: 0, max: 100 },
+  sourcePoints: { min: 0, max: 100 },
   bothBonus: { min: 0, max: 100 },
   speedBonus: { min: 0, max: 100 },
   answerTimeSec: { min: 5, max: 120 },
@@ -72,6 +88,7 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
     songCount: 10,
     titlePoints: 1,
     artistPoints: 1,
+    sourcePoints: 0,
     bothBonus: 0,
     speedBonus: 0,
     answerTimeSec: 30,
@@ -87,6 +104,7 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
     songCount: 10,
     titlePoints: 2,
     artistPoints: 2,
+    sourcePoints: 0,
     bothBonus: 1,
     speedBonus: 3,
     answerTimeSec: 30,
@@ -102,6 +120,7 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
     songCount: 10,
     titlePoints: 2,
     artistPoints: 2,
+    sourcePoints: 0,
     bothBonus: 1,
     speedBonus: 0,
     answerTimeSec: 20,
@@ -117,11 +136,44 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
     songCount: 10,
     titlePoints: 2,
     artistPoints: 2,
+    sourcePoints: 0,
     bothBonus: 1,
     speedBonus: 0,
     answerTimeSec: 30,
     excerptSec: 30,
     playbackRate: 2,
+    teamMode: false,
+    easyMode: false,
+  },
+  screen: {
+    scoring: 'first',
+    winnerCount: 1,
+    rankStep: 0,
+    songCount: 10,
+    titlePoints: 0,
+    artistPoints: 0,
+    sourcePoints: 2,
+    bothBonus: 0,
+    speedBonus: 0,
+    answerTimeSec: 30,
+    excerptSec: 30,
+    playbackRate: 1,
+    teamMode: false,
+    easyMode: false,
+  },
+  game: {
+    scoring: 'first',
+    winnerCount: 1,
+    rankStep: 0,
+    songCount: 10,
+    titlePoints: 0,
+    artistPoints: 0,
+    sourcePoints: 2,
+    bothBonus: 0,
+    speedBonus: 0,
+    answerTimeSec: 30,
+    excerptSec: 30,
+    playbackRate: 1,
     teamMode: false,
     easyMode: false,
   },
@@ -137,6 +189,7 @@ export class RoundRules implements RoundRulesProps {
   readonly songCount: number;
   readonly titlePoints: number;
   readonly artistPoints: number;
+  readonly sourcePoints: number;
   readonly bothBonus: number;
   readonly speedBonus: number;
   readonly answerTimeSec: number;
@@ -152,6 +205,7 @@ export class RoundRules implements RoundRulesProps {
     this.songCount = props.songCount;
     this.titlePoints = props.titlePoints;
     this.artistPoints = props.artistPoints;
+    this.sourcePoints = props.sourcePoints;
     this.bothBonus = props.bothBonus;
     this.speedBonus = props.speedBonus;
     this.answerTimeSec = props.answerTimeSec;
@@ -184,8 +238,11 @@ export class RoundRules implements RoundRulesProps {
     if (typeof props.easyMode !== 'boolean') {
       return invalid('easyMode must be true or false');
     }
-    if (props.titlePoints === 0 && props.artistPoints === 0) {
-      return invalid('A round must reward the title, the artist or both');
+    if (props.sourcePoints > 0 && (props.titlePoints > 0 || props.artistPoints > 0)) {
+      return invalid('A round asks either the film or series, or the title and the artist');
+    }
+    if (props.titlePoints === 0 && props.artistPoints === 0 && props.sourcePoints === 0) {
+      return invalid('A round must reward the title, the artist, both, or the film or series');
     }
     return ok(new RoundRules(props));
   }
@@ -201,16 +258,17 @@ export class RoundRules implements RoundRulesProps {
   }
 
   /** Whether players must find this part of the song. */
-  asks(target: 'title' | 'artist'): boolean {
+  asks(target: Target): boolean {
     return this.pointsFor(target) > 0;
   }
 
   /** Points of a part for the winner at `rank` (0 = first place), after the descending scale. */
-  pointsForRank(target: 'title' | 'artist', rank: number): number {
+  pointsForRank(target: Target, rank: number): number {
     return Math.max(0, this.pointsFor(target) - rank * this.rankStep);
   }
 
-  pointsFor(target: 'title' | 'artist'): number {
+  pointsFor(target: Target): number {
+    if (target === 'source') return this.sourcePoints;
     return target === 'title' ? this.titlePoints : this.artistPoints;
   }
 
@@ -222,6 +280,7 @@ export class RoundRules implements RoundRulesProps {
       songCount: this.songCount,
       titlePoints: this.titlePoints,
       artistPoints: this.artistPoints,
+      sourcePoints: this.sourcePoints,
       bothBonus: this.bothBonus,
       speedBonus: this.speedBonus,
       answerTimeSec: this.answerTimeSec,

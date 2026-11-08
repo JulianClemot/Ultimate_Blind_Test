@@ -20,6 +20,7 @@ const design = () => {
         playlist: playlist.value,
         playlistTitle: '80s',
         rules: RoundRules.preset('flash'),
+        sourceOverrides: { '1': 'Frozen', '2': null },
       },
     ],
     updatedAt: 2,

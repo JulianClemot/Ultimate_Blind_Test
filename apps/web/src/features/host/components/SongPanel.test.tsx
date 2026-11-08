@@ -133,6 +133,7 @@ describe('<SongPanel />', () => {
           songId: 's1',
           title: 'One More Time',
           artist: 'Daft Punk',
+          source: null,
           scoreboard: [],
           teamScoreboard: [],
         }}

@@ -17,6 +17,7 @@ const song: SongDto = {
   asksTitle: true,
   asksArtist: true,
   revealed: false,
+  asksSource: false,
   suggestions: [],
 };
 
@@ -58,7 +59,7 @@ describe('playerGameReducer', () => {
     const state = playerGameReducer(playing, { type: 'answerSent', answer: answer() });
     const judged = playerGameReducer(state, {
       type: 'answerJudged',
-      answer: answer({ verdict: { title: true, artist: true }, judgedByHost: true }),
+      answer: answer({ verdict: { title: true, artist: true, source: false }, judgedByHost: true }),
     });
     expect(judged?.myAnswers[0]?.judgedByHost).toBe(true);
   });
@@ -67,7 +68,14 @@ describe('playerGameReducer', () => {
     const scoreboard = [{ playerId: 'p1', playerName: 'Alice', points: 3 }];
     const revealed = playerGameReducer(playing, {
       type: 'songRevealed',
-      reveal: { songId: 's1', title: 'Take On Me', artist: 'a-ha', scoreboard, teamScoreboard: [] },
+      reveal: {
+        songId: 's1',
+        title: 'Take On Me',
+        artist: 'a-ha',
+        source: null,
+        scoreboard,
+        teamScoreboard: [],
+      },
     });
     expect(revealed).toMatchObject({
       currentSong: { revealed: true },
@@ -151,7 +159,14 @@ describe('playerGameReducer recap', () => {
       const teamScoreboard = [{ teamId: 'team-1', teamName: 'The Funky Flamingos', points: 3 }];
       const revealed = playerGameReducer(playing, {
         type: 'songRevealed',
-        reveal: { songId: 's1', title: 'T', artist: 'A', scoreboard: [], teamScoreboard },
+        reveal: {
+          songId: 's1',
+          title: 'T',
+          artist: 'A',
+          source: null,
+          scoreboard: [],
+          teamScoreboard,
+        },
       });
       expect(revealed?.teamScoreboard).toEqual(teamScoreboard);
       expect(

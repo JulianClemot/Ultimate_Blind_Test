@@ -7,3 +7,4 @@ export * from './SequentialIdGenerator';
 export * from './StubGameCodeGenerator';
 export * from './StubMusicCatalog';
 export * from './fixtures';
+export * from './StubSourceResolver';

@@ -16,6 +16,7 @@ const plan = (playlist: string, type: RoundPlan['type'] = 'classic'): RoundPlan 
   name: `Round ${playlist}`,
   playlistTitle: `Playlist ${playlist}`,
   rules: RoundRules.preset(type),
+  sourceOverrides: {},
 });
 
 const newDesign = (name = '  Friday   night ') =>

@@ -248,11 +248,12 @@ describe('party use cases', () => {
       unwrap(await join('Bob'));
       unwrap(await nextSong(host));
       const { answer: sent } = unwrap(await answer(game.id, player.id, 'the one with the piano'));
-      expect(sent.verdict).toEqual({ title: false, artist: false });
+      expect(sent.verdict).toEqual({ title: false, artist: false, source: false });
       const judge = (title: boolean) =>
         new JudgeAnswer(games, events).execute({
           ...host,
           answerId: sent.id,
+          source: false,
           title,
           artist: false,
         });

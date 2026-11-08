@@ -107,7 +107,8 @@ const HostGame = ({ session }: { session: HostSession }) => {
           <CardTitle>{t('host.answers')}</CardTitle>
           <AnswerList
             answers={game.answers}
-            asks={{ title: song.asksTitle, artist: song.asksArtist }}
+            sourceLabel={t(song.roundType === 'game' ? 'player.game' : 'player.source')}
+            asks={{ title: song.asksTitle, artist: song.asksArtist, source: song.asksSource }}
             onJudge={(answer, verdict) => judgeAnswer.mutate({ answerId: answer.id, ...verdict })}
           />
           <ErrorMessage error={judgeAnswer.error} />

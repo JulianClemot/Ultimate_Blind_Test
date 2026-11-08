@@ -1,4 +1,4 @@
-import { err, ok, type Result } from '../../domain';
+import { err, ok, withOverrides, type Result, type RoundPlan, type Track } from '../../domain';
 import { appError, type UseCaseError } from '../errors';
 import type { HostCommand, NextSongResult, NextSongUseCase } from '../ports/in';
 import type {
@@ -7,8 +7,10 @@ import type {
   GameRepository,
   IdGenerator,
   MusicCatalog,
+  Playlist,
   RandomGenerator,
 } from '../ports/out';
+import type { PlaylistAnalyzer } from '../services/PlaylistAnalyzer';
 import { loadHostedGame } from './access';
 
 /**
@@ -23,6 +25,7 @@ export class NextSong implements NextSongUseCase {
     private readonly events: GameEventPublisher,
     private readonly catalog: MusicCatalog,
     private readonly random: RandomGenerator,
+    private readonly analyzer?: PlaylistAnalyzer,
   ) {}
 
   async execute(command: HostCommand): Promise<Result<NextSongResult, UseCaseError>> {
@@ -48,7 +51,16 @@ export class NextSong implements NextSongUseCase {
     const playlist = await this.catalog.playlist(round.plan.playlist);
     if (!playlist.ok) return playlist;
 
-    const candidates = playlist.value.tracks.filter((track) => !game.hasPlayed(track.id));
+    const eligible = await this.eligibleTracks(round.plan, playlist.value);
+    if (eligible.length === 0) {
+      return err(
+        appError(
+          'NO_SOURCE_TRACKS',
+          `No track of the playlist of round ${round.number} could be linked to a film, series or game`,
+        ),
+      );
+    }
+    const candidates = eligible.filter((track) => !game.hasPlayed(track.id));
     if (candidates.length === 0) {
       return err(
         appError(
@@ -66,11 +78,26 @@ export class NextSong implements NextSongUseCase {
       songId: this.ids.next(),
       startedAt: this.clock.now(),
       track,
-      playlistTracks: playlist.value.tracks,
+      playlistTracks: eligible,
     });
     if (!song.ok) return song;
     await this.games.save(game);
     this.events.songStarted(game, song.value);
     return ok({ kind: 'song', game, song: song.value });
+  }
+
+  /**
+   * Tracks a round can play. In a round about films and series, only those with a known
+   * film or series, named as the host corrected them, carry it as their `source`.
+   */
+  private async eligibleTracks(plan: RoundPlan, playlist: Playlist): Promise<readonly Track[]> {
+    if (!plan.rules.asks('source')) return playlist.tracks;
+    if (!this.analyzer) return [];
+    const analysis = await this.analyzer.analyze(playlist);
+    const sources = withOverrides(analysis.sources, plan.sourceOverrides);
+    return playlist.tracks.flatMap((track) => {
+      const source = sources.get(track.id);
+      return source ? [{ ...track, source }] : [];
+    });
   }
 }
