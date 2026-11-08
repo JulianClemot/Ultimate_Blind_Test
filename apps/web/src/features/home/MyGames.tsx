@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
 import { useDeleteDesign } from '@/shared/api/designsApi';
@@ -10,6 +11,7 @@ import { TrashIcon } from '@/shared/ui/icons';
 
 /** The games designed in this browser, with a two-step delete (button, then confirmation). */
 export const MyGames = () => {
+  const { t } = useTranslation();
   const designs = useDesignStore((s) => s.designs);
   const forget = useDesignStore((s) => s.forget);
   const remove = useDeleteDesign();
@@ -44,24 +46,24 @@ export const MyGames = () => {
 
   return (
     <>
-      <h3 className="mt-6 mb-2 text-sm font-semibold">My games</h3>
+      <h3 className="mt-6 mb-2 text-sm font-semibold">{t('home.myGames')}</h3>
       <ul className="flex flex-col divide-y">
         {designs.map((design) => (
           <li key={design.designId} className="flex items-center justify-between gap-2 py-2">
             {confirming === design.designId ? (
               <>
                 <span className="min-w-0 flex-1 truncate text-sm">
-                  Delete “{design.name}” for good?
+                  {t('home.deleteConfirm', { name: design.name })}
                 </span>
                 <Button
                   variant="outline"
                   disabled={remove.isPending}
                   onClick={() => confirmDelete(design)}
                 >
-                  Yes, delete
+                  {t('home.yesDelete')}
                 </Button>
                 <Button variant="ghost" disabled={remove.isPending} onClick={cancel}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
               </>
             ) : (
@@ -74,8 +76,8 @@ export const MyGames = () => {
                 </Link>
                 <Button
                   variant="ghost"
-                  aria-label={`Delete ${design.name}`}
-                  title="Delete"
+                  aria-label={t('home.deleteGame', { name: design.name })}
+                  title={t('common.delete')}
                   className="size-9 shrink-0 p-0 text-muted-foreground hover:text-destructive"
                   onClick={() => {
                     remove.reset();

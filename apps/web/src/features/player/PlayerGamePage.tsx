@@ -1,9 +1,10 @@
 import type { AnswerDto, SongDto } from '@ubt/shared';
 import { useState, type SubmitEvent } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 
 import { cn } from '@/shared/lib/cn';
-import { ROUND_TYPE_INFO } from '@/shared/lib/roundTypes';
+import { roundTypeInfo } from '@/shared/lib/roundTypes';
 import { findTeam, usesTeamMode } from '@/shared/lib/teams';
 import { formatCountdown } from '@/shared/lib/time';
 import { useCountdown } from '@/shared/lib/useCountdown';
@@ -21,7 +22,14 @@ import { TeamScoreboard } from '@/shared/ui/TeamScoreboard';
 import { foundParts } from './playerGameState';
 import { usePlayerGame } from './usePlayerGame';
 
-const AnswerForm = ({ onSubmit, pending }: { onSubmit: (t: string) => void; pending: boolean }) => {
+const AnswerForm = ({
+  onSubmit,
+  pending,
+}: {
+  onSubmit: (text: string) => void;
+  pending: boolean;
+}) => {
+  const { t } = useTranslation();
   const [text, setText] = useState('');
   const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -31,8 +39,8 @@ const AnswerForm = ({ onSubmit, pending }: { onSubmit: (t: string) => void; pend
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
       <Input
-        aria-label="Your answer"
-        placeholder="Artist – Title (one guess only!)"
+        aria-label={t('player.answerLabel')}
+        placeholder={t('player.answerPlaceholder')}
         autoFocus
         autoComplete="off"
         autoCorrect="off"
@@ -43,7 +51,7 @@ const AnswerForm = ({ onSubmit, pending }: { onSubmit: (t: string) => void; pend
         onChange={(e) => setText(e.target.value)}
       />
       <Button type="submit" size="xl" disabled={!text.trim() || pending}>
-        Answer!
+        {t('player.answer')}
       </Button>
     </form>
   );
@@ -61,16 +69,18 @@ const Found = ({ label, found }: { label: string; found: boolean }) => (
 );
 
 const SongProgress = ({ song, answers }: { song: SongDto; answers: readonly AnswerDto[] }) => {
+  const { t } = useTranslation();
   const found = foundParts(answers);
   return (
     <div className="flex gap-2">
-      {song.asksTitle && <Found label="Title" found={found.title} />}
-      {song.asksArtist && <Found label="Artist" found={found.artist} />}
+      {song.asksTitle && <Found label={t('player.title')} found={found.title} />}
+      {song.asksArtist && <Found label={t('player.artist')} found={found.artist} />}
     </div>
   );
 };
 
 const PlayerGame = ({ session }: { session: PlayerSession }) => {
+  const { t } = useTranslation();
   const { state, rejoinError, submitAnswer } = usePlayerGame(session);
   const song = state?.currentSong ?? null;
   const open = song !== null && !song.revealed;
@@ -78,7 +88,7 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
   const remaining = useCountdown(open ? song.startedAt + song.answerTimeSec * 1000 : null);
 
   if (rejoinError) return <ErrorMessage error={rejoinError} />;
-  if (!state) return <p className="text-muted-foreground">Connecting to the game…</p>;
+  if (!state) return <p className="text-muted-foreground">{t('common.connecting')}</p>;
 
   if (state.status === 'finished') {
     // The recap follows `game:finished` by a few ms; the plain scores fill the gap.
@@ -93,7 +103,7 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
     }
     return (
       <Card>
-        <CardTitle>{state.name} — final scores</CardTitle>
+        <CardTitle>{t('player.finalScores', { name: state.name })}</CardTitle>
         <Scoreboard scores={state.scoreboard} playerId={state.player.id} />
       </Card>
     );
@@ -110,28 +120,41 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
           {state.player.name} · {state.name}
         </CardTitle>
         {myTeam && (
-          <p className="rounded-lg bg-secondary p-3 text-sm" aria-label="Your team">
-            Your team: <span className="font-bold">{myTeam.name}</span>
-            {teammates.length > 0 && <> · with {teammates.map((p) => p.name).join(', ')}</>}
+          <p className="rounded-lg bg-secondary p-3 text-sm" aria-label={t('player.yourTeamLabel')}>
+            <Trans
+              i18nKey="player.yourTeam"
+              values={{ name: myTeam.name }}
+              components={{ name: <span className="font-bold" /> }}
+            />
+            {teammates.length > 0 && (
+              <>
+                {' '}
+                · {t('player.withTeammates', { names: teammates.map((p) => p.name).join(', ') })}
+              </>
+            )}
           </p>
         )}
         {teamRounds && !myTeam && !song && (
-          <p className="text-sm text-muted-foreground">The host will draw the teams soon.</p>
+          <p className="text-sm text-muted-foreground">{t('player.teamsComing')}</p>
         )}
-        {!song && <p>Waiting for the host to play the first song…</p>}
+        {!song && <p>{t('player.waitingFirstSong')}</p>}
 
         {song && (
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm text-muted-foreground">
-                Round {song.roundNumber} · {song.roundName || ROUND_TYPE_INFO[song.roundType].label}
+                {t('common.round', { number: song.roundNumber })} ·{' '}
+                {song.roundName || roundTypeInfo(song.roundType).label}
               </p>
               <p className="text-lg font-semibold">
-                Song {song.number}/{song.songCount}
+                {t('common.song', { number: song.number, count: song.songCount })}
               </p>
             </div>
             {open && remaining !== null && (
-              <p className="font-mono text-4xl font-bold tabular-nums" aria-label="Seconds left">
+              <p
+                className="font-mono text-4xl font-bold tabular-nums"
+                aria-label={t('common.secondsLeft')}
+              >
                 {formatCountdown(remaining)}
               </p>
             )}
@@ -142,12 +165,12 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
 
         {open && state.everyoneAnswered && (
           <p role="status" className="rounded-lg bg-secondary p-4 text-center font-semibold">
-            Everyone answered — waiting for the result…
+            {t('player.everyoneAnswered')}
           </p>
         )}
         {open && !state.everyoneAnswered && hasAnswered && (
           <p role="status" className="font-medium">
-            Answer sent! Waiting for the others…
+            {t('player.answerSent')}
           </p>
         )}
         {open && !hasAnswered && remaining !== 0 && (
@@ -157,12 +180,12 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
           </>
         )}
         {open && !hasAnswered && remaining === 0 && (
-          <p className="text-muted-foreground">Time is up!</p>
+          <p className="text-muted-foreground">{t('player.timeIsUp')}</p>
         )}
 
         {state.reveal && (
           <div className="rounded-lg bg-secondary p-4 text-center">
-            <p className="text-sm text-muted-foreground">It was</p>
+            <p className="text-sm text-muted-foreground">{t('common.itWas')}</p>
             <p className="text-2xl font-bold">{state.reveal.title}</p>
             <p className="text-lg">{state.reveal.artist}</p>
           </div>
@@ -172,7 +195,9 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
       {!song && state.rounds.length > 0 && (
         <Card>
           <CardTitle>
-            How the game works · {state.rounds.length} round{state.rounds.length === 1 ? '' : 's'}
+            {t('player.howItWorks', {
+              rounds: t('common.roundCount', { count: state.rounds.length }),
+            })}
           </CardTitle>
           <GameOverview rounds={state.rounds} />
         </Card>
@@ -180,14 +205,14 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
 
       {teamRounds && state.teamScoreboard.length > 0 && (
         <Card>
-          <CardTitle>Team scores</CardTitle>
+          <CardTitle>{t('player.teamScores')}</CardTitle>
           <TeamScoreboard scores={state.teamScoreboard} teamId={state.myTeamId} />
         </Card>
       )}
 
       {state.scoreboard.length > 0 && (
         <Card>
-          <CardTitle>Scores</CardTitle>
+          <CardTitle>{t('player.scores')}</CardTitle>
           <Scoreboard scores={state.scoreboard} playerId={state.player.id} />
         </Card>
       )}
@@ -196,6 +221,7 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
 };
 
 export const PlayerGamePage = () => {
+  const { t } = useTranslation();
   const { gameId } = useParams();
   const session = useSessionStore((s) => s.player);
 
@@ -205,7 +231,7 @@ export const PlayerGamePage = () => {
         <PlayerGame session={session} />
       ) : (
         <p>
-          You have not joined this game. <Link to="/">Join a game</Link>
+          {t('player.notJoined')} <Link to="/">{t('player.joinAGame')}</Link>
         </p>
       )}
     </PageLayout>

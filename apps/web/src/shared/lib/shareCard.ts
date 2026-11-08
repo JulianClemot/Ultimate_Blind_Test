@@ -1,24 +1,24 @@
 import type { GameRecapDto, SuperlativeKindDto } from '@ubt/shared';
+import { t } from 'i18next';
+
+import { formatDecimal } from './time';
 
 /** Words for the awards of the recap, shared by the screen and the share card. */
 export const describeAward = ({ kind, value }: { kind: SuperlativeKindDto; value: number }) => {
+  const title = t(`awards.${kind}.title`);
   switch (kind) {
     case 'fastest-finger':
       return {
         icon: '⚡',
-        title: 'Fastest finger',
-        detail: `${(value / 1000).toFixed(1)} s on average`,
+        title,
+        detail: t('awards.fastest-finger.detail', { seconds: formatDecimal(value / 1000, 1) }),
       };
     case 'sniper':
-      return {
-        icon: '🎯',
-        title: 'Sniper',
-        detail: `first to find ${value} song${value === 1 ? '' : 's'}`,
-      };
+      return { icon: '🎯', title, detail: t('awards.sniper.detail', { count: value }) };
     case 'stubborn':
-      return { icon: '🙈', title: 'Stubborn', detail: `${value} wrong guesses` };
+      return { icon: '🙈', title, detail: t('awards.stubborn.detail', { count: value }) };
     case 'comeback-kid':
-      return { icon: '🚀', title: 'Comeback kid', detail: `climbed ${value} places` };
+      return { icon: '🚀', title, detail: t('awards.comeback-kid.detail', { count: value }) };
   }
 };
 
@@ -46,7 +46,7 @@ export const buildShareCard = (recap: GameRecapDto, playerId?: string): ShareCar
       const { icon, title, detail } = describeAward(mine);
       highlight = `${icon} ${title} · ${detail}`;
     } else if (standing) {
-      highlight = `Finished #${standing.rank} with ${standing.points} pts`;
+      highlight = t('share.finishedHighlight', { rank: standing.rank, points: standing.points });
     }
   } else {
     const first = recap.superlatives[0];
@@ -71,7 +71,7 @@ export const renderShareCard = (card: ShareCard): Promise<Blob> => {
   canvas.width = WIDTH;
   canvas.height = HEIGHT;
   const ctx = canvas.getContext('2d');
-  if (!ctx) return Promise.reject(new Error('Canvas is not supported by this browser'));
+  if (!ctx) return Promise.reject(new Error(t('share.noCanvas')));
 
   ctx.fillStyle = COLORS.cream;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -114,7 +114,7 @@ export const renderShareCard = (card: ShareCard): Promise<Blob> => {
     ctx.font = '700 64px "DM Sans", sans-serif';
     ctx.fillText(fit(ctx, name, 520), 250, y + 8);
     ctx.textAlign = 'right';
-    ctx.fillText(`${points} pts`, WIDTH - 120, y + 8);
+    ctx.fillText(t('common.pts', { value: points }), WIDTH - 120, y + 8);
     ctx.textAlign = 'left';
   });
 
@@ -125,11 +125,11 @@ export const renderShareCard = (card: ShareCard): Promise<Blob> => {
   }
   ctx.fillStyle = COLORS.ink;
   ctx.font = '500 34px "DM Sans", sans-serif';
-  ctx.fillText('Think you can beat us? Join the next game.', 90, 1230);
+  ctx.fillText(t('share.cta'), 90, 1230);
 
   return new Promise((resolve, reject) =>
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error('Could not create the image'))),
+      (blob) => (blob ? resolve(blob) : reject(new Error(t('share.noImage')))),
       'image/png',
     ),
   );
@@ -174,7 +174,7 @@ export const shareImage = async (
   const file = new File([image], FILENAME, { type: 'image/png' });
   if (typeof nav.canShare === 'function' && nav.canShare({ files: [file] })) {
     try {
-      await nav.share({ files: [file], title, text: `${title} — my Ultimate Blind Test results` });
+      await nav.share({ files: [file], title, text: t('share.text', { title }) });
       return 'shared';
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled';

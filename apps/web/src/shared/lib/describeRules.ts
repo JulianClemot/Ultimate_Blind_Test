@@ -1,4 +1,5 @@
 import type { RoundRulesDto } from '@ubt/shared';
+import { t } from 'i18next';
 
 /** The preview Deezer provides is 30 s long: playing all of it is not worth mentioning. */
 const FULL_PREVIEW_SEC = 30;
@@ -15,54 +16,57 @@ const pointsByPlace = (base: number, rules: RoundRulesDto): string => {
   return rules.winnerCount > MAX_PLACES_LISTED ? `${list}, …` : list;
 };
 
-const points = (count: number) => `${count} point${count === 1 ? '' : 's'}`;
+const points = (count: number) => t('rules.points', { count });
 
 /** Rules of a round as short sentences players can read in the lobby. */
 export const describeRules = (rules: RoundRulesDto): string[] => {
   const asksTitle = rules.titlePoints > 0;
   const asksArtist = rules.artistPoints > 0;
-  const lines = [
-    `${rules.songCount} song${rules.songCount === 1 ? '' : 's'}, ${rules.answerTimeSec} s to answer each`,
-  ];
+  const lines = [t('rules.songsAndTime', { count: rules.songCount, time: rules.answerTimeSec })];
 
   if (asksTitle && asksArtist) {
     lines.push(
-      `Find the title (${points(rules.titlePoints)}) and the artist (${points(rules.artistPoints)})`,
+      t('rules.findBoth', { title: points(rules.titlePoints), artist: points(rules.artistPoints) }),
     );
   } else if (asksTitle) {
-    lines.push(`Find the title (${points(rules.titlePoints)})`);
+    lines.push(t('rules.findTitle', { title: points(rules.titlePoints) }));
   } else if (asksArtist) {
-    lines.push(`Find the artist (${points(rules.artistPoints)})`);
+    lines.push(t('rules.findArtist', { artist: points(rules.artistPoints) }));
   }
 
   if (rules.scoring === 'everyone') {
-    lines.push('Everyone who answers correctly scores');
+    lines.push(t('rules.everyoneScores'));
   } else if (rules.winnerCount === 1) {
-    lines.push('Only the fastest correct answer scores');
+    lines.push(t('rules.onlyFastest'));
   } else {
-    lines.push(`The first ${rules.winnerCount} players to answer correctly score`);
+    lines.push(t('rules.firstN', { count: rules.winnerCount }));
   }
   if (rules.scoring === 'first' && rules.winnerCount > 1 && rules.rankStep > 0) {
     lines.push(
       asksTitle && asksArtist
-        ? `Points by place — title: ${pointsByPlace(rules.titlePoints, rules)} · artist: ${pointsByPlace(rules.artistPoints, rules)}`
-        : `Points by place: ${pointsByPlace(asksTitle ? rules.titlePoints : rules.artistPoints, rules)}`,
+        ? t('rules.placesBoth', {
+            title: pointsByPlace(rules.titlePoints, rules),
+            artist: pointsByPlace(rules.artistPoints, rules),
+          })
+        : t('rules.placesOne', {
+            list: pointsByPlace(asksTitle ? rules.titlePoints : rules.artistPoints, rules),
+          }),
     );
   }
   if (rules.teamMode) {
-    lines.push('Team round: the points also count for your team');
+    lines.push(t('rules.teamRound'));
   }
   if (asksTitle && asksArtist && rules.bothBonus > 0) {
-    lines.push(`Bonus: +${points(rules.bothBonus)} for finding both`);
+    lines.push(t('rules.bothBonus', { points: points(rules.bothBonus) }));
   }
   if (rules.speedBonus > 0) {
-    lines.push(`Speed bonus: up to +${points(rules.speedBonus)} for quick answers`);
+    lines.push(t('rules.speedBonus', { points: points(rules.speedBonus) }));
   }
   if (rules.excerptSec < FULL_PREVIEW_SEC) {
-    lines.push(`Only the first ${rules.excerptSec} s of each song are played`);
+    lines.push(t('rules.excerpt', { count: rules.excerptSec }));
   }
   if (rules.playbackRate !== 1) {
-    lines.push(`Songs are played at ×${rules.playbackRate} speed`);
+    lines.push(t('rules.playbackRate', { rate: rules.playbackRate }));
   }
   return lines;
 };

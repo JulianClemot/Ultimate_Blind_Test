@@ -1,5 +1,6 @@
 import type { PlayerSessionDto } from '@ubt/shared';
 import { useState, type SubmitEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/ui/button';
 import { ErrorMessage } from '@/shared/ui/ErrorMessage';
@@ -17,6 +18,7 @@ export const JoinForm = ({
   const [code, setCode] = useState(initialCode);
   const [playerName, setPlayerName] = useState('');
   const join = useJoinGame();
+  const { t } = useTranslation();
 
   const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -26,8 +28,8 @@ export const JoinForm = ({
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
       <Input
-        aria-label="Game code"
-        placeholder="GAME CODE"
+        aria-label={t('join.gameCode')}
+        placeholder={t('join.gameCodePlaceholder')}
         autoCapitalize="characters"
         autoComplete="off"
         autoCorrect="off"
@@ -37,8 +39,8 @@ export const JoinForm = ({
         onChange={(e) => setCode(e.target.value)}
       />
       <Input
-        aria-label="Your name"
-        placeholder="Your name"
+        aria-label={t('join.yourName')}
+        placeholder={t('join.yourName')}
         autoComplete="off"
         autoCorrect="off"
         spellCheck={false}
@@ -47,7 +49,7 @@ export const JoinForm = ({
       />
       <ErrorMessage error={join.error} />
       <Button type="submit" disabled={!code.trim() || !playerName.trim() || join.isPending}>
-        Join
+        {t('join.join')}
       </Button>
     </form>
   );

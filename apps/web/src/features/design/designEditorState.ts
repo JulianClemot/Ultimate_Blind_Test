@@ -7,6 +7,7 @@ import type {
   RoundTypeDto,
   UpdateGameDesignPayload,
 } from '@ubt/shared';
+import { t } from 'i18next';
 
 /** Pure state of the design editor — easy to unit test. */
 
@@ -197,10 +198,10 @@ export const toUpdatePayload = (state: EditorState): UpdateGameDesignPayload => 
 /** Problems the host should fix before launching (the server checks the rest). */
 export const roundWarnings = (round: EditorRound): string[] => {
   const warnings: string[] = [];
-  if (!round.playlist.trim()) warnings.push('Choose a Deezer playlist.');
+  if (!round.playlist.trim()) warnings.push(t('design.warnNoPlaylist'));
   if (round.playableTracks !== null && round.playableTracks < round.rules.songCount) {
     warnings.push(
-      `This playlist has only ${round.playableTracks} playable tracks for ${round.rules.songCount} songs.`,
+      t('design.warnFewTracks', { tracks: round.playableTracks, songs: round.rules.songCount }),
     );
   }
   const { scoring, winnerCount, rankStep, titlePoints, artistPoints } = round.rules;
@@ -208,11 +209,11 @@ export const roundWarnings = (round: EditorRound): string[] => {
   if (scoring === 'first' && winnerCount > 1 && rankStep > 0) {
     const asked = [titlePoints, artistPoints].filter((points) => points > 0);
     if (asked.some((points) => points - lastPlace <= 0)) {
-      warnings.push('With this many points lost per place, the last winners get no points.');
+      warnings.push(t('design.warnNoPoints'));
     }
   }
   if (round.rules.titlePoints === 0 && round.rules.artistPoints === 0) {
-    warnings.push('Give points for the title, the artist or both.');
+    warnings.push(t('design.warnNoScoring'));
   }
   return warnings;
 };

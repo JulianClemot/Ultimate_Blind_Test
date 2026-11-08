@@ -1,7 +1,8 @@
 import type { NumericRuleDto, RoundCatalogDto, RoundTypeDto } from '@ubt/shared';
 import type { Dispatch } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import { ROUND_TYPE_INFO, ROUND_TYPES } from '@/shared/lib/roundTypes';
+import { roundTypeInfo, ROUND_TYPES } from '@/shared/lib/roundTypes';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Field } from '@/shared/ui/Field';
@@ -19,14 +20,15 @@ interface RoundEditorProps {
   readonly dispatch: Dispatch<EditorAction>;
 }
 
+/** Translation keys (under `design.`) of the label and optional hint of each numeric rule. */
 const NUMERIC_RULES: readonly { rule: NumericRuleDto; label: string; hint?: string }[] = [
-  { rule: 'songCount', label: 'Songs' },
-  { rule: 'answerTimeSec', label: 'Answer time (s)' },
-  { rule: 'excerptSec', label: 'Music played (s)', hint: 'Out of the 30 s preview' },
-  { rule: 'titlePoints', label: 'Title points', hint: '0 = title not asked' },
-  { rule: 'artistPoints', label: 'Artist points', hint: '0 = artist not asked' },
-  { rule: 'bothBonus', label: 'Bonus for both' },
-  { rule: 'speedBonus', label: 'Max speed bonus', hint: 'Decreases until time is up' },
+  { rule: 'songCount', label: 'songs' },
+  { rule: 'answerTimeSec', label: 'answerTime' },
+  { rule: 'excerptSec', label: 'excerpt', hint: 'excerptHint' },
+  { rule: 'titlePoints', label: 'titlePoints', hint: 'titlePointsHint' },
+  { rule: 'artistPoints', label: 'artistPoints', hint: 'artistPointsHint' },
+  { rule: 'bothBonus', label: 'bothBonus' },
+  { rule: 'speedBonus', label: 'speedBonus', hint: 'speedBonusHint' },
 ];
 
 const RuleInput = ({
@@ -48,17 +50,18 @@ const RuleInput = ({
 );
 
 export const RoundEditor = ({ round, index, count, catalog, dispatch }: RoundEditorProps) => {
+  const { t } = useTranslation();
   const key = round.key;
   const warnings = roundWarnings(round);
   return (
-    <Card className="flex flex-col gap-4" aria-label={`Round ${index + 1}`}>
+    <Card className="flex flex-col gap-4" aria-label={t('common.round', { number: index + 1 })}>
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-lg font-semibold">Round {index + 1}</h3>
+        <h3 className="text-lg font-semibold">{t('common.round', { number: index + 1 })}</h3>
         <div className="flex gap-1">
           <Button
             type="button"
             variant="ghost"
-            aria-label="Move up"
+            aria-label={t('design.moveUp')}
             disabled={index === 0}
             onClick={() => dispatch({ type: 'roundMoved', key, offset: -1 })}
           >
@@ -67,7 +70,7 @@ export const RoundEditor = ({ round, index, count, catalog, dispatch }: RoundEdi
           <Button
             type="button"
             variant="ghost"
-            aria-label="Move down"
+            aria-label={t('design.moveDown')}
             disabled={index === count - 1}
             onClick={() => dispatch({ type: 'roundMoved', key, offset: 1 })}
           >
@@ -78,21 +81,21 @@ export const RoundEditor = ({ round, index, count, catalog, dispatch }: RoundEdi
             variant="ghost"
             onClick={() => dispatch({ type: 'roundRemoved', key })}
           >
-            Remove
+            {t('design.remove')}
           </Button>
         </div>
       </div>
 
-      <Field label="Round name">
+      <Field label={t('design.roundName')}>
         <Input
           value={round.name}
           maxLength={60}
-          placeholder={round.playlistTitle ?? `Round ${index + 1}`}
+          placeholder={round.playlistTitle ?? t('common.round', { number: index + 1 })}
           onChange={(e) => dispatch({ type: 'roundRenamed', key, name: e.target.value })}
         />
       </Field>
 
-      <Field label="Round type" hint={ROUND_TYPE_INFO[round.type].description}>
+      <Field label={t('design.roundType')} hint={roundTypeInfo(round.type).description}>
         <Select
           value={round.type}
           onChange={(e) =>
@@ -106,7 +109,7 @@ export const RoundEditor = ({ round, index, count, catalog, dispatch }: RoundEdi
         >
           {ROUND_TYPES.map((type) => (
             <option key={type} value={type}>
-              {ROUND_TYPE_INFO[type].label}
+              {roundTypeInfo(type).label}
             </option>
           ))}
         </Select>
@@ -130,18 +133,15 @@ export const RoundEditor = ({ round, index, count, catalog, dispatch }: RoundEdi
           onChange={(e) => dispatch({ type: 'teamModeChanged', key, teamMode: e.target.checked })}
         />
         <span className="flex flex-col">
-          <span className="font-medium">Team mode</span>
-          <span className="text-xs text-muted-foreground">
-            Points scored in this round also count for the players' teams. You generate the teams in
-            the lobby, right before the first song.
-          </span>
+          <span className="font-medium">{t('design.teamMode')}</span>
+          <span className="text-xs text-muted-foreground">{t('design.teamModeHint')}</span>
         </span>
       </label>
 
       <details>
-        <summary className="cursor-pointer text-sm font-medium">Rules</summary>
+        <summary className="cursor-pointer text-sm font-medium">{t('design.rules')}</summary>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Field label="Who scores">
+          <Field label={t('design.whoScores')}>
             <Select
               value={round.rules.scoring}
               onChange={(e) =>
@@ -152,27 +152,21 @@ export const RoundEditor = ({ round, index, count, catalog, dispatch }: RoundEdi
                 })
               }
             >
-              <option value="first">First players only</option>
-              <option value="everyone">Everyone correct</option>
+              <option value="first">{t('design.firstOnly')}</option>
+              <option value="everyone">{t('design.everyoneCorrect')}</option>
             </Select>
           </Field>
           {round.rules.scoring === 'first' && (
-            <Field
-              label="Number of winners"
-              hint="The first players to answer correctly get the points"
-            >
+            <Field label={t('design.winners')} hint={t('design.winnersHint')}>
               <RuleInput rule="winnerCount" round={round} catalog={catalog} dispatch={dispatch} />
             </Field>
           )}
           {round.rules.scoring === 'first' && round.rules.winnerCount > 1 && (
-            <Field
-              label="Points lost per place"
-              hint="Each next winner gets this many points less (0 = same for all)"
-            >
+            <Field label={t('design.rankStep')} hint={t('design.rankStepHint')}>
               <RuleInput rule="rankStep" round={round} catalog={catalog} dispatch={dispatch} />
             </Field>
           )}
-          <Field label="Speed">
+          <Field label={t('design.speed')}>
             <Select
               value={round.rules.playbackRate}
               onChange={(e) =>
@@ -187,7 +181,11 @@ export const RoundEditor = ({ round, index, count, catalog, dispatch }: RoundEdi
             </Select>
           </Field>
           {NUMERIC_RULES.map(({ rule, label, hint }) => (
-            <Field key={rule} label={label} {...(hint ? { hint } : {})}>
+            <Field
+              key={rule}
+              label={t(`design.${label}`)}
+              {...(hint ? { hint: t(`design.${hint}`) } : {})}
+            >
               <RuleInput rule={rule} round={round} catalog={catalog} dispatch={dispatch} />
             </Field>
           ))}

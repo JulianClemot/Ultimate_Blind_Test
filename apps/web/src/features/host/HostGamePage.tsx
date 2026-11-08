@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 
 import { useSongMusic } from '@/shared/audio/useSongMusic';
@@ -21,20 +22,21 @@ import { TeamsPanel } from './components/TeamsPanel';
 import { useHostGame } from './useHostGame';
 
 const HostGame = ({ session }: { session: HostSession }) => {
+  const { t } = useTranslation();
   const { game, attachError, nextSong, revealSong, judgeAnswer, generateTeams, finishGame } =
     useHostGame(session);
   const [scoresOpen, setScoresOpen] = useState(false);
   const music = useSongMusic(game?.status === 'finished' ? null : (game?.currentSong ?? null));
 
   if (attachError) return <ErrorMessage error={attachError} />;
-  if (!game) return <p className="text-muted-foreground">Connecting to the game…</p>;
+  if (!game) return <p className="text-muted-foreground">{t('common.connecting')}</p>;
 
   if (game.status === 'finished') {
     // The recap follows `game:finished` by a few ms; the plain scores fill the gap.
     if (game.recap) return <Recap recap={game.recap} />;
     return (
       <Card>
-        <CardTitle>{game.name} — final scores</CardTitle>
+        <CardTitle>{t('player.finalScores', { name: game.name })}</CardTitle>
         <Scoreboard scores={game.scoreboard} />
       </Card>
     );
@@ -47,7 +49,9 @@ const HostGame = ({ session }: { session: HostSession }) => {
     <>
       <Card className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm text-muted-foreground">{game.name} · join with the code</p>
+          <p className="text-sm text-muted-foreground">
+            {t('host.joinWithCode', { name: game.name })}
+          </p>
           <p className="font-mono text-4xl font-bold tracking-[0.3em]">{game.code}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -56,7 +60,7 @@ const HostGame = ({ session }: { session: HostSession }) => {
             aria-pressed={scoresOpen}
             onClick={() => setScoresOpen((open) => !open)}
           >
-            Scores
+            {t('host.scores')}
           </Button>
           {song?.revealed && (
             <Button
@@ -64,7 +68,7 @@ const HostGame = ({ session }: { session: HostSession }) => {
               disabled={finishGame.isPending}
               onClick={() => finishGame.mutate()}
             >
-              End the game
+              {t('host.endGame')}
             </Button>
           )}
         </div>
@@ -82,9 +86,7 @@ const HostGame = ({ session }: { session: HostSession }) => {
           onReveal={() => revealSong.mutate()}
           onReplay={music.replay}
           onStop={music.stop}
-          nextBlockedReason={
-            teamsMissing ? 'Generate the teams before playing the first song.' : null
-          }
+          nextBlockedReason={teamsMissing ? t('host.generateTeamsFirst') : null}
           teamSetup={
             teamRounds && (
               <TeamsPanel
@@ -102,7 +104,7 @@ const HostGame = ({ session }: { session: HostSession }) => {
 
       {song && (
         <Card>
-          <CardTitle>Answers</CardTitle>
+          <CardTitle>{t('host.answers')}</CardTitle>
           <AnswerList
             answers={game.answers}
             asks={{ title: song.asksTitle, artist: song.asksArtist }}
@@ -115,7 +117,7 @@ const HostGame = ({ session }: { session: HostSession }) => {
       {!song && (
         <Card>
           <CardTitle>
-            The game · {game.rounds.length} round{game.rounds.length === 1 ? '' : 's'}
+            {t('host.theGame', { rounds: t('common.roundCount', { count: game.rounds.length }) })}
           </CardTitle>
           <GameOverview rounds={game.rounds} />
         </Card>
@@ -124,7 +126,7 @@ const HostGame = ({ session }: { session: HostSession }) => {
       {!song && (
         <Card className="flex flex-col gap-6 sm:flex-row sm:items-start">
           <div className="flex-1">
-            <CardTitle>Players ({game.players.length})</CardTitle>
+            <CardTitle>{t('host.players', { count: game.players.length })}</CardTitle>
             <PlayerList players={game.players} />
           </div>
           <JoinQrCode code={game.code} />
@@ -142,6 +144,7 @@ const HostGame = ({ session }: { session: HostSession }) => {
 };
 
 export const HostGamePage = () => {
+  const { t } = useTranslation();
   const { gameId } = useParams();
   const session = useSessionStore((s) => s.host);
 
@@ -151,7 +154,7 @@ export const HostGamePage = () => {
         <HostGame session={session} />
       ) : (
         <p>
-          You are not the host of this game. <Link to="/">Back home</Link>
+          {t('host.notHost')} <Link to="/">{t('common.backHome')}</Link>
         </p>
       )}
     </PageLayout>

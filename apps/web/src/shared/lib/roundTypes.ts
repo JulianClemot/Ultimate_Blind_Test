@@ -1,4 +1,5 @@
 import type { RoundTypeDto } from '@ubt/shared';
+import { t } from 'i18next';
 
 export const ROUND_TYPES: readonly RoundTypeDto[] = [
   'classic',
@@ -7,23 +8,8 @@ export const ROUND_TYPES: readonly RoundTypeDto[] = [
   'fast-forward',
 ];
 
-export const ROUND_TYPE_INFO: Readonly<
-  Record<RoundTypeDto, { label: string; description: string }>
-> = {
-  classic: {
-    label: 'Classic',
-    description: 'Title and artist score separately; the fastest correct answer takes the points.',
-  },
-  everyone: {
-    label: 'Everyone scores',
-    description: 'Every correct answer scores, and faster answers earn more.',
-  },
-  flash: {
-    label: 'Flash',
-    description: 'Only a few seconds of the song are played.',
-  },
-  'fast-forward': {
-    label: 'Fast-forward',
-    description: 'The song plays faster than normal.',
-  },
-};
+/** Translated name and description of a round type (call it while rendering). */
+export const roundTypeInfo = (type: RoundTypeDto): { label: string; description: string } => ({
+  label: t(`roundTypes.${type}.label`),
+  description: t(`roundTypes.${type}.description`),
+});

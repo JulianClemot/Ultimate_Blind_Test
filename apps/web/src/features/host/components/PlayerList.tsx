@@ -1,8 +1,10 @@
 import type { PlayerDto } from '@ubt/shared';
+import { useTranslation } from 'react-i18next';
 
-export const PlayerList = ({ players }: { players: readonly PlayerDto[] }) =>
-  players.length === 0 ? (
-    <p className="text-sm text-muted-foreground">Waiting for players to join…</p>
+export const PlayerList = ({ players }: { players: readonly PlayerDto[] }) => {
+  const { t } = useTranslation();
+  return players.length === 0 ? (
+    <p className="text-sm text-muted-foreground">{t('host.waitingPlayers')}</p>
   ) : (
     <ul className="flex flex-wrap gap-2">
       {players.map((player) => (
@@ -12,3 +14,4 @@ export const PlayerList = ({ players }: { players: readonly PlayerDto[] }) =>
       ))}
     </ul>
   );
+};

@@ -1,4 +1,5 @@
 import type { PlaylistSummaryDto } from '@ubt/shared';
+import { useTranslation } from 'react-i18next';
 
 import { useCheckPlaylist } from '@/shared/api/designsApi';
 import { Button } from '@/shared/ui/button';
@@ -21,6 +22,7 @@ export const PlaylistField = ({
   onChange,
   onChecked,
 }: PlaylistFieldProps) => {
+  const { t } = useTranslation();
   const check = useCheckPlaylist();
   const verify = () => {
     const playlist = value.trim();
@@ -28,11 +30,11 @@ export const PlaylistField = ({
   };
   return (
     <div className="flex flex-col gap-1 text-sm">
-      <span className="font-medium">Deezer playlist</span>
+      <span className="font-medium">{t('design.playlist')}</span>
       <div className="flex gap-2">
         <Input
-          aria-label="Deezer playlist"
-          placeholder="https://www.deezer.com/playlist/…"
+          aria-label={t('design.playlist')}
+          placeholder={t('design.playlistPlaceholder')}
           value={value}
           onChange={(e) => {
             check.reset();
@@ -48,12 +50,15 @@ export const PlaylistField = ({
           onClick={verify}
           disabled={!value.trim() || check.isPending}
         >
-          Check
+          {t('design.check')}
         </Button>
       </div>
       {playableTracks !== null && (
         <span className="text-xs text-muted-foreground">
-          {title ?? 'Playlist'} · {playableTracks} playable tracks
+          {t('design.playableTracks', {
+            title: title ?? t('design.playlistFallback'),
+            count: playableTracks,
+          })}
         </span>
       )}
       {playableTracks === null && title && (

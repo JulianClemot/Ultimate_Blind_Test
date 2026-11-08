@@ -1,4 +1,5 @@
 import type { ScoreDto } from '@ubt/shared';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/shared/lib/cn';
 
@@ -11,7 +12,10 @@ interface ScoreboardProps {
 
 /** Players ranked by points; ties share a rank. */
 export const Scoreboard = ({ scores, playerId, limit }: ScoreboardProps) => {
-  if (scores.length === 0) return <p className="text-sm text-muted-foreground">No player yet.</p>;
+  const { t } = useTranslation();
+  if (scores.length === 0) {
+    return <p className="text-sm text-muted-foreground">{t('recap.noPlayer')}</p>;
+  }
   // Scores arrive sorted best first: the first player with the same points gives the rank.
   const ranked = scores.map((score) => ({
     ...score,
@@ -19,7 +23,7 @@ export const Scoreboard = ({ scores, playerId, limit }: ScoreboardProps) => {
   }));
   const shown = limit ? ranked.slice(0, limit) : ranked;
   return (
-    <ol className="flex flex-col divide-y divide-ink/20" aria-label="Scoreboard">
+    <ol className="flex flex-col divide-y divide-ink/20" aria-label={t('recap.scoreboard')}>
       {shown.map((score) => (
         <li
           key={score.playerId}
@@ -31,7 +35,7 @@ export const Scoreboard = ({ scores, playerId, limit }: ScoreboardProps) => {
         >
           <span className="w-6 text-right font-mono text-muted-foreground">{score.rank}.</span>
           <span className="flex-1 truncate">{score.playerName}</span>
-          <span className="font-mono tabular-nums">{score.points} pts</span>
+          <span className="font-mono tabular-nums">{t('common.pts', { value: score.points })}</span>
         </li>
       ))}
     </ol>

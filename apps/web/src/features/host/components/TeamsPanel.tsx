@@ -1,5 +1,6 @@
 import type { PlayerDto, TeamDto } from '@ubt/shared';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { MAX_TEAMS } from '@/shared/lib/teams';
 import { Button } from '@/shared/ui/button';
@@ -20,6 +21,7 @@ interface TeamsPanelProps {
  * generated names. Can be redone until the game starts.
  */
 export const TeamsPanel = ({ players, teams, pending, error, onGenerate }: TeamsPanelProps) => {
+  const { t } = useTranslation();
   const [requested, setRequested] = useState(2);
   // Every team needs a player: never offer more teams than players.
   const maxTeams = Math.max(2, Math.min(MAX_TEAMS, players.length));
@@ -27,9 +29,9 @@ export const TeamsPanel = ({ players, teams, pending, error, onGenerate }: Teams
   const notEnoughPlayers = players.length < 2;
 
   return (
-    <section aria-label="Teams" className="flex flex-col gap-3 rounded-lg border p-4">
+    <section aria-label={t('host.teams')} className="flex flex-col gap-3 rounded-lg border p-4">
       <div className="flex flex-wrap items-end gap-3">
-        <Field label="Number of teams">
+        <Field label={t('host.numberOfTeams')}>
           <Select
             value={teamCount}
             disabled={pending}
@@ -37,7 +39,7 @@ export const TeamsPanel = ({ players, teams, pending, error, onGenerate }: Teams
           >
             {Array.from({ length: maxTeams - 1 }, (_, i) => i + 2).map((count) => (
               <option key={count} value={count}>
-                {count} teams
+                {t('host.teamsOption', { count })}
               </option>
             ))}
           </Select>
@@ -47,17 +49,11 @@ export const TeamsPanel = ({ players, teams, pending, error, onGenerate }: Teams
           disabled={pending || notEnoughPlayers}
           onClick={() => onGenerate(teamCount)}
         >
-          {teams.length > 0 ? 'Shuffle the teams again' : 'Generate the teams'}
+          {teams.length > 0 ? t('host.shuffleTeams') : t('host.generateTeams')}
         </Button>
       </div>
-      {notEnoughPlayers && (
-        <p className="text-sm text-muted-foreground">Wait for at least 2 players to join.</p>
-      )}
-      {teams.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          Players who join later are added to the smallest team.
-        </p>
-      )}
+      {notEnoughPlayers && <p className="text-sm text-muted-foreground">{t('host.needPlayers')}</p>}
+      {teams.length > 0 && <p className="text-xs text-muted-foreground">{t('host.lateJoiners')}</p>}
       <ErrorMessage error={error} />
 
       {teams.length > 0 && (

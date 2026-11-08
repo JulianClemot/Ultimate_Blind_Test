@@ -1,7 +1,8 @@
 import type { HostSongDto, RevealDto } from '@ubt/shared';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import { ROUND_TYPE_INFO } from '@/shared/lib/roundTypes';
+import { roundTypeInfo } from '@/shared/lib/roundTypes';
 import { formatCountdown } from '@/shared/lib/time';
 import { useCountdown } from '@/shared/lib/useCountdown';
 import { Button } from '@/shared/ui/button';
@@ -26,11 +27,12 @@ interface SongPanelProps {
 
 /** The answer, shown only while hovered or focused so the host can give oral clues. */
 const HostPeek = ({ song }: { song: HostSongDto }) => {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   return (
     <button
       type="button"
-      aria-label="Peek at the answer (host only)"
+      aria-label={t('host.peekLabel')}
       className="rounded-lg border border-dashed p-3 text-left text-sm"
       onMouseEnter={() => setVisible(true)}
       onMouseLeave={() => setVisible(false)}
@@ -42,7 +44,7 @@ const HostPeek = ({ song }: { song: HostSongDto }) => {
           {song.artist} – {song.title}
         </span>
       ) : (
-        <span className="text-muted-foreground">👀 Hover to peek at the answer (only you)</span>
+        <span className="text-muted-foreground">{t('host.peekHint')}</span>
       )}
     </button>
   );
@@ -63,6 +65,7 @@ export const SongPanel = ({
   teamSetup,
   nextBlockedReason = null,
 }: SongPanelProps) => {
+  const { t } = useTranslation();
   const open = song !== null && !song.revealed;
   const remaining = useCountdown(open ? song.startedAt + song.answerTimeSec * 1000 : null);
   const autoRevealed = useRef<string | null>(null);
@@ -74,7 +77,11 @@ export const SongPanel = ({
     }
   }, [open, remaining, song, onReveal]);
 
-  const nextLabel = !song ? 'Play the first song' : hasNextSong ? 'Next song' : 'Show final scores';
+  const nextLabel = !song
+    ? t('host.playFirst')
+    : hasNextSong
+      ? t('host.nextSong')
+      : t('host.showFinal');
 
   return (
     <div className="flex flex-col gap-4">
@@ -82,36 +89,37 @@ export const SongPanel = ({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm text-muted-foreground">
-              Round {song.roundNumber}/{roundCount} ·{' '}
-              {song.roundName || ROUND_TYPE_INFO[song.roundType].label}
+              {t('common.roundOf', { number: song.roundNumber, count: roundCount })} ·{' '}
+              {song.roundName || roundTypeInfo(song.roundType).label}
             </p>
             <p className="text-lg font-semibold">
-              Song {song.number}/{song.songCount}
+              {t('common.song', { number: song.number, count: song.songCount })}
             </p>
           </div>
           {open && remaining !== null && (
-            <p className="font-mono text-4xl font-bold tabular-nums" aria-label="Seconds left">
+            <p
+              className="font-mono text-4xl font-bold tabular-nums"
+              aria-label={t('common.secondsLeft')}
+            >
               {formatCountdown(remaining)}
             </p>
           )}
         </div>
       ) : (
-        <p className="text-muted-foreground">
-          Wait for everyone to join, then play the first song.
-        </p>
+        <p className="text-muted-foreground">{t('host.waitForJoin')}</p>
       )}
 
       {open && <HostPeek song={song} />}
 
       {open && everyoneAnswered && (
         <p role="status" className="rounded-lg bg-secondary p-4 text-center font-semibold">
-          Everyone answered — revealing the result…
+          {t('host.revealing')}
         </p>
       )}
 
       {reveal && (
         <div className="rounded-lg bg-secondary p-4 text-center">
-          <p className="text-sm text-muted-foreground">It was</p>
+          <p className="text-sm text-muted-foreground">{t('common.itWas')}</p>
           <p className="text-2xl font-bold">{reveal.title}</p>
           <p className="text-lg">{reveal.artist}</p>
         </div>
@@ -128,7 +136,7 @@ export const SongPanel = ({
       <div className="flex flex-wrap gap-2">
         {open ? (
           <Button onClick={onReveal} disabled={pending}>
-            Reveal now
+            {t('host.revealNow')}
           </Button>
         ) : (
           <Button onClick={onNext} disabled={pending || nextBlockedReason !== null}>
@@ -138,10 +146,10 @@ export const SongPanel = ({
         {song && (
           <>
             <Button variant="outline" onClick={onReplay}>
-              Replay music
+              {t('host.replayMusic')}
             </Button>
             <Button variant="outline" onClick={onStop}>
-              Stop music
+              {t('host.stopMusic')}
             </Button>
           </>
         )}

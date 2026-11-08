@@ -1,5 +1,6 @@
 import type { RoundCatalogDto, RoundTypeDto } from '@ubt/shared';
 import { useEffect, useReducer, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router';
 
 import {
@@ -10,7 +11,7 @@ import {
   type DesignAccess,
 } from '@/shared/api/designsApi';
 import { useLaunchGame } from '@/shared/api/gamesApi';
-import { ROUND_TYPE_INFO, ROUND_TYPES } from '@/shared/lib/roundTypes';
+import { roundTypeInfo, ROUND_TYPES } from '@/shared/lib/roundTypes';
 import { useDesignStore, type SavedDesign } from '@/shared/session/designStore';
 import { useSessionStore } from '@/shared/session/sessionStore';
 import { Button } from '@/shared/ui/button';
@@ -30,6 +31,7 @@ import {
 } from './designEditorState';
 
 const DesignEditor = ({ saved, catalog }: { saved: SavedDesign; catalog: RoundCatalogDto }) => {
+  const { t } = useTranslation();
   const access: DesignAccess = { designId: saved.designId, editToken: saved.editToken };
   const navigate = useNavigate();
   const design = useDesign(access);
@@ -51,7 +53,7 @@ const DesignEditor = ({ saved, catalog }: { saved: SavedDesign; catalog: RoundCa
   }, [design.data]);
 
   if (design.error) return <ErrorMessage error={design.error} />;
-  if (!design.data) return <p className="text-muted-foreground">Loading the game…</p>;
+  if (!design.data) return <p className="text-muted-foreground">{t('common.loadingGame')}</p>;
 
   const persist = async () => {
     const result = await save.mutateAsync(toUpdatePayload(state));
@@ -77,7 +79,7 @@ const DesignEditor = ({ saved, catalog }: { saved: SavedDesign; catalog: RoundCa
   return (
     <>
       <Card className="flex flex-col gap-4">
-        <Field label="Game name">
+        <Field label={t('design.gameName')}>
           <Input
             value={state.name}
             maxLength={60}
@@ -85,8 +87,10 @@ const DesignEditor = ({ saved, catalog }: { saved: SavedDesign; catalog: RoundCa
           />
         </Field>
         <p className="text-sm text-muted-foreground">
-          {state.rounds.length} round{state.rounds.length === 1 ? '' : 's'} · {totalSongs(state)}{' '}
-          songs
+          {t('design.summary', {
+            rounds: t('common.roundCount', { count: state.rounds.length }),
+            songs: t('common.songCount', { count: totalSongs(state) }),
+          })}
         </p>
       </Card>
 
@@ -103,7 +107,7 @@ const DesignEditor = ({ saved, catalog }: { saved: SavedDesign; catalog: RoundCa
 
       {state.rounds.length < catalog.maxRounds && (
         <Card>
-          <CardTitle>Add a round</CardTitle>
+          <CardTitle>{t('design.addRound')}</CardTitle>
           <div className="grid gap-2 sm:grid-cols-2">
             {ROUND_TYPES.map((type) => (
               <button
@@ -112,9 +116,9 @@ const DesignEditor = ({ saved, catalog }: { saved: SavedDesign; catalog: RoundCa
                 onClick={() => addRound(type)}
                 className="rounded-lg border p-3 text-left hover:bg-secondary"
               >
-                <span className="font-medium">{ROUND_TYPE_INFO[type].label}</span>
+                <span className="font-medium">{roundTypeInfo(type).label}</span>
                 <span className="block text-xs text-muted-foreground">
-                  {ROUND_TYPE_INFO[type].description}
+                  {roundTypeInfo(type).description}
                 </span>
               </button>
             ))}
@@ -126,10 +130,10 @@ const DesignEditor = ({ saved, catalog }: { saved: SavedDesign; catalog: RoundCa
         <div className="flex flex-1 flex-col gap-1">
           <ErrorMessage error={save.error ?? launch.error ?? remove.error} />
           {state.rounds.length === 0 && (
-            <p className="text-sm text-muted-foreground">Add a round to launch the game.</p>
+            <p className="text-sm text-muted-foreground">{t('design.addRoundHint')}</p>
           )}
           {state.dirty && !save.error && (
-            <p className="text-sm text-muted-foreground">Unsaved changes</p>
+            <p className="text-sm text-muted-foreground">{t('design.unsaved')}</p>
           )}
         </div>
         <Button
@@ -144,16 +148,16 @@ const DesignEditor = ({ saved, catalog }: { saved: SavedDesign; catalog: RoundCa
             })
           }
         >
-          Delete
+          {t('common.delete')}
         </Button>
         <Button variant="outline" disabled={!state.dirty || busy} onClick={() => void persist()}>
-          Save
+          {t('common.save')}
         </Button>
         <Button
           disabled={state.rounds.length === 0 || blocking.length > 0 || busy}
           onClick={() => void startParty().catch(() => undefined)}
         >
-          Launch the party
+          {t('design.launch')}
         </Button>
       </Card>
     </>
@@ -161,6 +165,7 @@ const DesignEditor = ({ saved, catalog }: { saved: SavedDesign; catalog: RoundCa
 };
 
 export const DesignEditorPage = () => {
+  const { t } = useTranslation();
   const { designId } = useParams();
   const saved = useDesignStore((s) => s.designs.find((d) => d.designId === designId));
   const catalog = useRoundCatalog();
@@ -169,7 +174,7 @@ export const DesignEditorPage = () => {
     <PageLayout>
       {!saved ? (
         <p>
-          This game was not created in this browser. <Link to="/">Back home</Link>
+          {t('design.notHere')} <Link to="/">{t('common.backHome')}</Link>
         </p>
       ) : catalog.data ? (
         <DesignEditor saved={saved} catalog={catalog.data} />

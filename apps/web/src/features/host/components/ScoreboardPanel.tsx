@@ -1,5 +1,6 @@
 import type { ScoreDto, TeamScoreDto } from '@ubt/shared';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/ui/button';
 import { CloseIcon } from '@/shared/ui/icons';
@@ -24,6 +25,7 @@ export const ScoreboardPanel = ({
   teamScores = [],
   onClose,
 }: ScoreboardPanelProps) => {
+  const { t } = useTranslation();
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -36,23 +38,26 @@ export const ScoreboardPanel = ({
   if (!open) return null;
   return (
     <aside
-      aria-label="Scores"
+      aria-label={t('host.scores')}
       className="fixed inset-y-0 right-0 z-10 flex w-full max-w-xs flex-col gap-4 overflow-y-auto border-l bg-card p-6 text-card-foreground shadow-xl"
     >
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">Scores</h2>
-        <Button variant="ghost" aria-label="Close scores" className="size-9 p-0" onClick={onClose}>
+        <h2 className="text-lg font-semibold">{t('host.scores')}</h2>
+        <Button
+          variant="ghost"
+          aria-label={t('host.scoresClose')}
+          className="size-9 p-0"
+          onClick={onClose}
+        >
           <CloseIcon />
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Points of the songs revealed so far, as the players see them.
-      </p>
+      <p className="text-xs text-muted-foreground">{t('host.scoresHint')}</p>
       {teamScores.length > 0 && (
         <section className="flex flex-col gap-1">
-          <h3 className="text-sm font-semibold">Teams</h3>
+          <h3 className="text-sm font-semibold">{t('host.teams')}</h3>
           <TeamScoreboard scores={teamScores} />
-          <h3 className="mt-2 text-sm font-semibold">Players</h3>
+          <h3 className="mt-2 text-sm font-semibold">{t('host.playersHeading')}</h3>
         </section>
       )}
       <Scoreboard scores={scores} />

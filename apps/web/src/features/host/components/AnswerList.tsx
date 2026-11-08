@@ -1,4 +1,5 @@
 import type { AnswerDto, VerdictDto } from '@ubt/shared';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/shared/lib/cn';
 import { formatElapsed } from '@/shared/lib/time';
@@ -18,29 +19,35 @@ const VerdictToggle = ({
   label: string;
   correct: boolean;
   onToggle?: (() => void) | undefined;
-}) => (
-  <button
-    type="button"
-    aria-pressed={correct}
-    aria-label={`${label} ${correct ? 'correct' : 'wrong'}`}
-    disabled={!onToggle}
-    onClick={onToggle}
-    className={cn(
-      'rounded-full px-2 py-0.5 text-xs font-medium',
-      correct ? 'bg-success/15 text-success' : 'bg-destructive/10 text-destructive',
-      onToggle && 'hover:ring-2 hover:ring-ring',
-    )}
-  >
-    {label} {correct ? '✓' : '✗'}
-  </button>
-);
+}) => {
+  const { t } = useTranslation();
+  return (
+    <button
+      type="button"
+      aria-pressed={correct}
+      aria-label={t('host.verdictLabel', {
+        part: label,
+        verdict: correct ? t('host.verdictCorrect') : t('host.verdictWrong'),
+      })}
+      disabled={!onToggle}
+      onClick={onToggle}
+      className={cn(
+        'rounded-full px-2 py-0.5 text-xs font-medium',
+        correct ? 'bg-success/15 text-success' : 'bg-destructive/10 text-destructive',
+        onToggle && 'hover:ring-2 hover:ring-ring',
+      )}
+    >
+      {label} {correct ? '✓' : '✗'}
+    </button>
+  );
+};
 
 type Outcome = 'correct' | 'partial' | 'wrong';
 
-const OUTCOME_STYLE: Record<Outcome, { label: string; className: string }> = {
-  correct: { label: '✓ Correct', className: 'bg-success/15 text-success' },
-  partial: { label: '◐ Partial', className: 'bg-warning/15 text-warning' },
-  wrong: { label: '✗ Wrong', className: 'bg-destructive/10 text-destructive' },
+const OUTCOME_STYLE: Record<Outcome, { icon: string; className: string }> = {
+  correct: { icon: '✓', className: 'bg-success/15 text-success' },
+  partial: { icon: '◐', className: 'bg-warning/15 text-warning' },
+  wrong: { icon: '✗', className: 'bg-destructive/10 text-destructive' },
 };
 
 /** Overall result over the parts the round asks for. */
@@ -58,9 +65,11 @@ export const AnswerList = ({
   answers,
   asks = { title: true, artist: true },
   onJudge,
-}: AnswerListProps) =>
-  answers.length === 0 ? (
-    <p className="text-sm text-muted-foreground">No answer yet.</p>
+}: AnswerListProps) => {
+  const { t } = useTranslation();
+  const outcomeName = (outcome: Outcome) => t(`host.${outcome}`);
+  return answers.length === 0 ? (
+    <p className="text-sm text-muted-foreground">{t('host.noAnswer')}</p>
   ) : (
     <ol className="flex flex-col divide-y">
       {answers.map((answer, index) => (
@@ -70,18 +79,22 @@ export const AnswerList = ({
           <span className="min-w-0 flex-1 truncate">{answer.text}</span>
           <span
             role="status"
-            aria-label={`${answer.playerName}: ${outcomeOf(answer.verdict, asks)}`}
+            aria-label={t('host.outcomeLabel', {
+              player: answer.playerName,
+              outcome: outcomeName(outcomeOf(answer.verdict, asks)).toLocaleLowerCase(),
+            })}
             className={cn(
               'rounded-full px-2 py-0.5 text-xs font-semibold',
               OUTCOME_STYLE[outcomeOf(answer.verdict, asks)].className,
             )}
           >
-            {OUTCOME_STYLE[outcomeOf(answer.verdict, asks)].label}
+            {OUTCOME_STYLE[outcomeOf(answer.verdict, asks)].icon}{' '}
+            {outcomeName(outcomeOf(answer.verdict, asks))}
           </span>
           <span className="flex gap-1">
             {asks.title && (
               <VerdictToggle
-                label="Title"
+                label={t('player.title')}
                 correct={answer.verdict.title}
                 onToggle={
                   onJudge &&
@@ -91,7 +104,7 @@ export const AnswerList = ({
             )}
             {asks.artist && (
               <VerdictToggle
-                label="Artist"
+                label={t('player.artist')}
                 correct={answer.verdict.artist}
                 onToggle={
                   onJudge &&
@@ -105,3 +118,4 @@ export const AnswerList = ({
       ))}
     </ol>
   );
+};
