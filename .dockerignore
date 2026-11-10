@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+**/dist
+.git
+.github
+.husky
+docs
+.env
+.env.*
+coverage
+apps/server/data
+**/*.tsbuildinfo
+terraform
