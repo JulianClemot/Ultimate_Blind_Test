@@ -49,3 +49,15 @@ docs/           Architecture notes and ADRs
 
 See [docs/architecture.md](docs/architecture.md) for the design and [docs/adr](docs/adr) for the
 decisions behind it.
+
+## Manual Deployment
+
+For the manual ElasticBeanStalk deployment, you need to install the [EB CLI](https://github.com/aws/aws-elastic-beanstalk-cli-setup).
+
+Before doing any of these actions, set your AWS credentials with `AWS_PROFILE` or with access keys
+
+Then you init the EB repository : `eb init -p docker ubt-app`.
+
+After you create the EB environment on AWS : `eb create ubt-app`
+
+If you want to clean your environment, run : `eb terminate` in your local code
