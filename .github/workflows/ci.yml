@@ -22,3 +22,50 @@ jobs:
       - run: pnpm depcruise
       - run: pnpm test
       - run: pnpm build
+
+  deploy:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency: deploy-production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::448878779811:role/ubt-github-actions
+          aws-region: eu-west-3
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push images
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          for t in server web; do
+            docker build --target "$t" -t "$REGISTRY/ubt-$t:${{ github.sha }}" .
+            docker push "$REGISTRY/ubt-$t:${{ github.sha }}"
+          done
+
+      - name: Prepare deployment bundle
+        run: |
+          mkdir bundle
+          yq 'del(.services[].build)' docker-compose.yml > bundle/docker-compose.yml
+
+      - uses: aws-actions/aws-elasticbeanstalk-deploy@v1
+        with:
+          aws-region: eu-west-3
+          application-name: ubt-app
+          environment-name: ubt-app
+          create-environment-if-not-exists: 'false'
+          create-application-if-not-exists: 'false'
+          source-directory: bundle
+          option-settings: |
+            [
+              { "Namespace": "aws:elasticbeanstalk:application:envi
+                "OptionName": "IMAGE_TAG", "Value": "${{ github.sha }}" }
+            ]

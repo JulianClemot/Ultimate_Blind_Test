@@ -1,0 +1,34 @@
+name: ultimate-blind-test
+
+services:
+  server:
+    image: ${ECR_REGISTRY:?set ECR_REGISTRY, e.g. 123456789012.dkr.ecr.eu-west-3.amazonaws.com}/ubt-server:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      target: server
+    restart: unless-stopped
+    environment:
+      - ANTHROPIC_API_KEY # Optionnal
+      - SOURCE_LOOKUP_MODEL
+      - LOG_LEVEL
+    volumes:
+      - ubt-data:/data
+    expose:
+      - '3000'
+
+  web:
+    image: ${ECR_REGISTRY:?set ECR_REGISTRY, e.g. 123456789012.dkr.ecr.eu-west-3.amazonaws.com}/ubt-web:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      target: web
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    environment:
+      SERVER_URL: http://server:3000
+    ports:
+      - '${WEB_PORT:-8080}:80'
+
+volumes:
+  ubt-data:
