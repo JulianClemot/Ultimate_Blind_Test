@@ -1,25 +1,33 @@
 import type { GameSnapshotDto } from '@ubt/shared';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { createMemoryRouter, RouterProvider } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { GatewayError } from '@/shared/realtime/gameGateway';
+import { GatewayError, type GameGateway } from '@/shared/realtime/gameGateway';
 import { useSessionStore } from '@/shared/session/sessionStore';
 import { gameRecap, hostSong, snapshot } from '@/test/fixtures';
 import { fakeGateway, renderWithRealtime } from '@/test/renderWithRealtime';
 
 import { HostGamePage } from './HostGamePage';
 
-const renderPage = (game: GameSnapshotDto) =>
+// A data router: the page blocks navigation while the game is on.
+const renderHostWith = (gateway: GameGateway) =>
   renderWithRealtime(
-    <MemoryRouter initialEntries={['/host/g1']}>
-      <Routes>
-        <Route path="/host/:gameId" element={<HostGamePage />} />
-      </Routes>
-    </MemoryRouter>,
-    fakeGateway({ attachHost: vi.fn().mockResolvedValue(game) }),
+    <RouterProvider
+      router={createMemoryRouter(
+        [
+          { path: '/host/:gameId', element: <HostGamePage /> },
+          { path: '/', element: <p>Home page</p> },
+        ],
+        { initialEntries: ['/host/g1'] },
+      )}
+    />,
+    gateway,
   );
+
+const renderPage = (game: GameSnapshotDto, gateway: Partial<GameGateway> = {}) =>
+  renderHostWith(fakeGateway({ attachHost: vi.fn().mockResolvedValue(game), ...gateway }));
 
 describe('<HostGamePage />', () => {
   beforeEach(() => {
@@ -54,6 +62,129 @@ describe('<HostGamePage />', () => {
 
     expect(await screen.findByText('Song 1/2')).toBeInTheDocument();
     expect(screen.queryByText(/^The game ·/)).not.toBeInTheDocument();
+  });
+
+  describe('leaving a game that is on', () => {
+    const clickLogo = () =>
+      userEvent.click(screen.getByRole('link', { name: /Ultimate Blind Test/ }));
+
+    it('asks what to do instead of leaving when the logo is clicked', async () => {
+      renderPage(snapshot());
+      await screen.findByText('The game · 2 rounds');
+
+      await clickLogo();
+
+      expect(screen.getByRole('dialog', { name: 'Leave the game?' })).toBeVisible();
+      expect(screen.queryByText('Home page')).not.toBeInTheDocument();
+    });
+
+    it('stays on the game when the host cancels', async () => {
+      renderPage(snapshot());
+      await screen.findByText('The game · 2 rounds');
+      await clickLogo();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getByText('The game · 2 rounds')).toBeVisible();
+    });
+
+    it('leaves without ending the game when asked to leave it running', async () => {
+      const closeGame = vi.fn();
+      renderPage(snapshot(), { closeGame });
+      await screen.findByText('The game · 2 rounds');
+      await clickLogo();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Leave it running' }));
+
+      expect(await screen.findByText('Home page')).toBeVisible();
+      expect(closeGame).not.toHaveBeenCalled();
+    });
+
+    it('ends the game for everyone, then leaves', async () => {
+      const closeGame = vi.fn().mockResolvedValue([]);
+      renderPage(snapshot(), { closeGame });
+      await screen.findByText('The game · 2 rounds');
+      await clickLogo();
+
+      await userEvent.click(screen.getByRole('button', { name: 'End the game for everyone' }));
+
+      expect(await screen.findByText('Home page')).toBeVisible();
+      expect(closeGame).toHaveBeenCalledOnce();
+    });
+
+    it('stays put and says why when the game cannot be ended', async () => {
+      const closeGame = vi
+        .fn()
+        .mockRejectedValue(
+          new GatewayError({ code: 'GAME_FINISHED', message: 'This game is over' }),
+        );
+      renderPage(snapshot(), { closeGame });
+      await screen.findByText('The game · 2 rounds');
+      await clickLogo();
+
+      await userEvent.click(screen.getByRole('button', { name: 'End the game for everyone' }));
+
+      expect(await screen.findByRole('alert')).toBeVisible();
+      expect(screen.queryByText('Home page')).not.toBeInTheDocument();
+    });
+
+    it('warns before the tab is closed, but not once the game is over', async () => {
+      const { unmount } = renderPage(snapshot());
+      await screen.findByText('The game · 2 rounds');
+      const closing = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(closing);
+      expect(closing.defaultPrevented).toBe(true);
+      unmount();
+
+      renderPage(snapshot({ status: 'finished', hasNextSong: false }));
+      await screen.findByText(/final scores/);
+      const closed = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(closed);
+      expect(closed.defaultPrevented).toBe(false);
+    });
+
+    it('keeps the way back after leaving it running', async () => {
+      const closeGame = vi.fn().mockResolvedValue([]);
+      renderPage(snapshot(), { closeGame });
+      await screen.findByText('The game · 2 rounds');
+      await clickLogo();
+      await userEvent.click(screen.getByRole('button', { name: 'Leave it running' }));
+      await screen.findByText('Home page');
+      expect(useSessionStore.getState().host).not.toBeNull();
+    });
+
+    it('forgets the game once the host ended it and left', async () => {
+      renderPage(snapshot(), { closeGame: vi.fn().mockResolvedValue([]) });
+      await screen.findByText('The game · 2 rounds');
+      await clickLogo();
+      await userEvent.click(screen.getByRole('button', { name: 'End the game for everyone' }));
+      await screen.findByText('Home page');
+      expect(useSessionStore.getState().host).toBeNull();
+    });
+
+    it('forgets a game the server no longer has', async () => {
+      renderHostWith(
+        fakeGateway({
+          attachHost: vi
+            .fn()
+            .mockRejectedValue(
+              new GatewayError({ code: 'GAME_NOT_FOUND', message: 'Game not found' }),
+            ),
+        }),
+      );
+      await screen.findByRole('alert');
+      expect(useSessionStore.getState().host).toBeNull();
+    });
+
+    it('lets the host leave a finished game freely', async () => {
+      renderPage(snapshot({ status: 'finished', hasNextSong: false, recap: gameRecap() }));
+      await screen.findByText('Friday night — final results');
+
+      await clickLogo();
+
+      expect(await screen.findByText('Home page')).toBeVisible();
+    });
   });
 
   describe('scores panel', () => {
@@ -155,12 +286,7 @@ describe('<HostGamePage />', () => {
 
     it('generates the teams, shows them, then allows to start', async () => {
       const generateTeams = vi.fn().mockResolvedValue(generatedTeams);
-      renderWithRealtime(
-        <MemoryRouter initialEntries={['/host/g1']}>
-          <Routes>
-            <Route path="/host/:gameId" element={<HostGamePage />} />
-          </Routes>
-        </MemoryRouter>,
+      renderHostWith(
         fakeGateway({ attachHost: vi.fn().mockResolvedValue(teamGame()), generateTeams }),
       );
 
@@ -179,12 +305,7 @@ describe('<HostGamePage />', () => {
     it('renames a team and shows the teams the server answers with', async () => {
       const renamed = [{ ...generatedTeams[0]!, name: 'Les Rois' }, generatedTeams[1]!];
       const renameTeam = vi.fn().mockResolvedValue(renamed);
-      renderWithRealtime(
-        <MemoryRouter initialEntries={['/host/g1']}>
-          <Routes>
-            <Route path="/host/:gameId" element={<HostGamePage />} />
-          </Routes>
-        </MemoryRouter>,
+      renderHostWith(
         fakeGateway({
           attachHost: vi.fn().mockResolvedValue(teamGame({ teams: generatedTeams })),
           renameTeam,
@@ -212,12 +333,7 @@ describe('<HostGamePage />', () => {
           { ...teams[1]!, players: [bob, alice] },
         ])
         .mockRejectedValueOnce(new GatewayError({ code: 'TEAMS_LOCKED', message: 'locked' }));
-      renderWithRealtime(
-        <MemoryRouter initialEntries={['/host/g1']}>
-          <Routes>
-            <Route path="/host/:gameId" element={<HostGamePage />} />
-          </Routes>
-        </MemoryRouter>,
+      renderHostWith(
         fakeGateway({
           attachHost: vi.fn().mockResolvedValue(teamGame({ players: [alice, bob, carol], teams })),
           movePlayers,

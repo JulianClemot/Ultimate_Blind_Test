@@ -75,6 +75,11 @@ export const useHostGame = (session: HostSession) => {
     onSuccess: (scoreboard) => dispatch({ type: 'gameFinished', scoreboard }),
   });
 
+  const closeGame = useMutation({
+    mutationFn: () => gateway.closeGame(),
+    onSuccess: (scoreboard) => dispatch({ type: 'gameFinished', scoreboard }),
+  });
+
   return {
     game,
     attachError,
@@ -85,5 +90,6 @@ export const useHostGame = (session: HostSession) => {
     renameTeam,
     movePlayers,
     finishGame,
+    closeGame,
   };
 };

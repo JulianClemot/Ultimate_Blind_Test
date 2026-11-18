@@ -10,6 +10,7 @@ import type { FastifyBaseLogger } from 'fastify';
 
 import type {
   AttachHostUseCase,
+  CloseGameUseCase,
   FinishGameUseCase,
   GenerateTeamsUseCase,
   JudgeAnswerUseCase,
@@ -40,6 +41,7 @@ export interface HostUseCases {
   readonly revealSong: RevealSongUseCase;
   readonly judgeAnswer: JudgeAnswerUseCase;
   readonly finishGame: FinishGameUseCase;
+  readonly closeGame: CloseGameUseCase;
 }
 
 const toNextSongResponseDto = (result: NextSongResult): NextSongResponseDto =>
@@ -143,6 +145,14 @@ export const registerHostHandlers = (
       const session = hostSession();
       if (!session) return notIdentified();
       return fromResult(await useCases.finishGame.execute(session), toPublicScoreboard);
+    }),
+  );
+
+  socket.on('game:close', (ack) =>
+    respond(ack, logger, async () => {
+      const session = hostSession();
+      if (!session) return notIdentified();
+      return fromResult(await useCases.closeGame.execute(session), toPublicScoreboard);
     }),
   );
 };

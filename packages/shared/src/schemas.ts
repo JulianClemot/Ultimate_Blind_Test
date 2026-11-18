@@ -100,6 +100,9 @@ export const rejoinGamePayloadSchema = z.object({
 });
 export type RejoinGamePayload = z.infer<typeof rejoinGamePayloadSchema>;
 
+/** Query of `GET /api/games/:gameId/status`. */
+export const gameStatusQuerySchema = z.object({ playerId: z.string().min(1) });
+
 export const generateTeamsPayloadSchema = z.object({
   /** Range (2–4) and player count are checked by the domain. */
   teamCount: z.number(),

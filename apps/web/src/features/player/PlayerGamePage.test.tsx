@@ -1,23 +1,29 @@
 import type { PlayerSessionDto } from '@ubt/shared';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { useRecentGamesStore } from '@/shared/session/recentGamesStore';
 import { useSessionStore } from '@/shared/session/sessionStore';
 import { answer, gameRecap, playerSession } from '@/test/fixtures';
 import { fakeGateway, renderWithRealtime } from '@/test/renderWithRealtime';
 
 import { PlayerGamePage } from './PlayerGamePage';
 
-const renderPage = (session: PlayerSessionDto) =>
+const renderWith = (rejoinGame: () => Promise<PlayerSessionDto>) =>
   renderWithRealtime(
     <MemoryRouter initialEntries={['/play/g1']}>
       <Routes>
         <Route path="/play/:gameId" element={<PlayerGamePage />} />
       </Routes>
     </MemoryRouter>,
-    fakeGateway({ rejoinGame: vi.fn().mockResolvedValue(session) }),
+    fakeGateway({ rejoinGame }),
   );
+
+const renderPage = (session: PlayerSessionDto) => renderWith(vi.fn().mockResolvedValue(session));
+
+const failure = (code: string) => Object.assign(new Error(code), { code });
 
 describe('<PlayerGamePage />', () => {
   beforeEach(() => {
@@ -107,7 +113,52 @@ describe('<PlayerGamePage />', () => {
     });
   });
 
+  describe('coming back to a game', () => {
+    const remembered = {
+      gameId: 'g1',
+      playerId: 'p1',
+      playerName: 'Alice',
+      gameName: 'Friday night',
+      code: 'ABCDEF',
+      savedAt: Date.now(),
+    };
+
+    beforeEach(() => useRecentGamesStore.setState({ games: [remembered] }));
+
+    it('rejoins from the browser memory when the tab has no session', async () => {
+      useSessionStore.setState({ player: null });
+      const rejoinGame = vi.fn().mockResolvedValue(playerSession());
+      renderWith(rejoinGame);
+
+      expect(await screen.findByText('Waiting for the host to play the first song…')).toBeVisible();
+      expect(rejoinGame).toHaveBeenCalledWith({ gameId: 'g1', playerId: 'p1' });
+    });
+
+    it('says the party is gone and forgets it when the server no longer has it', async () => {
+      renderWith(vi.fn().mockRejectedValue(failure('GAME_NOT_FOUND')));
+
+      expect(await screen.findByText('This game is no longer available')).toBeVisible();
+      await userEvent.click(screen.getByRole('link', { name: 'Back home' }));
+      expect(useRecentGamesStore.getState().games).toEqual([]);
+    });
+
+    it('keeps the game for a transient failure', async () => {
+      renderWith(vi.fn().mockRejectedValue(failure('SOMETHING_ELSE')));
+
+      expect(await screen.findByRole('alert')).toBeVisible();
+      expect(screen.queryByText('This game is no longer available')).not.toBeInTheDocument();
+      expect(useRecentGamesStore.getState().games).toHaveLength(1);
+    });
+  });
+
   describe('when the game is over', () => {
+    it('tells the player the host ended the party', async () => {
+      renderPage(playerSession({ status: 'finished', recap: gameRecap() }));
+
+      expect(await screen.findByText('The game is over')).toBeVisible();
+      expect(screen.getByRole('status')).toHaveTextContent('The host ended the party');
+    });
+
     it('shows the recap, worded for the player', async () => {
       renderPage(playerSession({ status: 'finished', recap: gameRecap() }));
 

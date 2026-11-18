@@ -126,6 +126,14 @@ describe('Game', () => {
       expect(game.finish()).toMatchObject({ ok: false, error: { code: 'SONG_IN_PROGRESS' } });
     });
 
+    it('can be closed at once, even mid-song, but only once', () => {
+      unwrap(startSong());
+      unwrap(game.close());
+      expect(game.status).toBe('finished');
+      expect(game.close()).toMatchObject({ ok: false, error: { code: 'GAME_FINISHED' } });
+      expect(startSong()).toMatchObject({ ok: false, error: { code: 'GAME_FINISHED' } });
+    });
+
     it('can be finished early', () => {
       playAndReveal();
       unwrap(game.finish());

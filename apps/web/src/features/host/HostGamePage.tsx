@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router';
+import { Link, useBlocker, useParams } from 'react-router';
 
 import { useSongMusic } from '@/shared/audio/useSongMusic';
 import { usesTeamMode } from '@/shared/lib/teams';
@@ -15,6 +15,7 @@ import { Scoreboard } from '@/shared/ui/Scoreboard';
 
 import { AnswerList } from './components/AnswerList';
 import { JoinQrCode } from './components/JoinQrCode';
+import { LeaveGameDialog } from './components/LeaveGameDialog';
 import { PlayerList } from './components/PlayerList';
 import { ScoreboardPanel } from './components/ScoreboardPanel';
 import { SongPanel } from './components/SongPanel';
@@ -33,9 +34,34 @@ const HostGame = ({ session }: { session: HostSession }) => {
     renameTeam,
     movePlayers,
     finishGame,
+    closeGame,
   } = useHostGame(session);
+  const clearHost = useSessionStore((s) => s.clearHost);
   const [scoresOpen, setScoresOpen] = useState(false);
   const music = useSongMusic(game?.status === 'finished' ? null : (game?.currentSong ?? null));
+
+  // Leaving a game that is still on (logo, back button, closing the tab) must be deliberate.
+  const active = game !== null && game.status !== 'finished';
+  const blocker = useBlocker(active);
+  const blocked = blocker.state === 'blocked' ? blocker : null;
+  useEffect(() => {
+    if (!active) return;
+    // Browsers show their own text here and no choices: closing a tab cannot end the game.
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [active]);
+
+  // Nothing left to come back to: no "back to the game" link on the home page.
+  const gone = ['GAME_NOT_FOUND', 'NOT_HOST'].includes(
+    String((attachError as { code?: unknown } | null)?.code),
+  );
+  const finished = game?.status === 'finished';
+  useEffect(() => {
+    if (gone) clearHost();
+    // Leaving a finished game (the cleanup) forgets it as well.
+    return finished ? clearHost : undefined;
+  }, [gone, finished, clearHost]);
 
   if (attachError) return <ErrorMessage error={attachError} />;
   if (!game) return <p className="text-muted-foreground">{t('common.connecting')}</p>;
@@ -56,6 +82,18 @@ const HostGame = ({ session }: { session: HostSession }) => {
   const teamsMissing = teamRounds && game.teams.length === 0;
   return (
     <>
+      {blocked && (
+        <LeaveGameDialog
+          pending={closeGame.isPending}
+          error={closeGame.error}
+          onEnd={() => closeGame.mutate(undefined, { onSuccess: () => blocked.proceed() })}
+          onLeave={() => blocked.proceed()}
+          onStay={() => {
+            closeGame.reset();
+            blocked.reset();
+          }}
+        />
+      )}
       <Card className="flex items-center justify-between gap-4">
         <div>
           <p className="text-sm text-muted-foreground">

@@ -14,6 +14,8 @@ const envSchema = z.object({
   SOURCE_LOOKUP_MODEL: z.string().min(1).optional(),
   /** SQLite file for game designs; ':memory:' keeps them in memory (tests). */
   DATABASE_PATH: z.string().min(1).default('data/ubt.sqlite'),
+  /** Minutes without any activity after which a running party is closed (the host left). */
+  IDLE_GAME_TIMEOUT_MIN: z.coerce.number().positive().default(120),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 

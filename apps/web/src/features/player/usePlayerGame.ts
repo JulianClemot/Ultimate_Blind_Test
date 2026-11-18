@@ -4,14 +4,22 @@ import { useReducer, useState } from 'react';
 import { useRealtime } from '@/shared/realtime/RealtimeContext';
 import { useOnConnect } from '@/shared/realtime/useOnConnect';
 import { useSocketEvent } from '@/shared/realtime/useSocketEvent';
+import { useRecentGamesStore } from '@/shared/session/recentGamesStore';
 import type { PlayerSession } from '@/shared/session/sessionStore';
 
 import { playerGameReducer } from './playerGameState';
+
+/** Rejoin errors meaning the party can never be resumed, as opposed to a transient failure. */
+export const isGoneError = (error: unknown): boolean => {
+  const code = (error as { code?: unknown } | null)?.code;
+  return code === 'GAME_NOT_FOUND' || code === 'UNKNOWN_PLAYER';
+};
 
 export const usePlayerGame = (session: PlayerSession) => {
   const { gateway } = useRealtime();
   const [state, dispatch] = useReducer(playerGameReducer, null);
   const [rejoinError, setRejoinError] = useState<unknown>(null);
+  const remember = useRecentGamesStore((s) => s.remember);
 
   useOnConnect(() => {
     gateway
@@ -19,6 +27,14 @@ export const usePlayerGame = (session: PlayerSession) => {
       .then((rejoined) => {
         setRejoinError(null);
         dispatch({ type: 'rejoined', session: rejoined });
+        // Keeps the way back from the home page alive for as long as the party goes on.
+        remember({
+          gameId: rejoined.gameId,
+          playerId: rejoined.player.id,
+          playerName: rejoined.player.name,
+          gameName: rejoined.name,
+          code: rejoined.code,
+        });
       })
       .catch(setRejoinError);
   });

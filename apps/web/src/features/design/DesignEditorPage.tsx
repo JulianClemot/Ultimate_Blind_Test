@@ -64,7 +64,12 @@ const DesignEditor = ({ saved, catalog }: { saved: SavedDesign; catalog: RoundCa
   const startParty = async () => {
     if (state.dirty) await persist();
     const party = await launch.mutateAsync(access);
-    setHost({ gameId: party.gameId, hostToken: party.hostToken });
+    setHost({
+      gameId: party.gameId,
+      hostToken: party.hostToken,
+      gameName: state.name,
+      code: party.code,
+    });
     void navigate(`/host/${party.gameId}`);
   };
 

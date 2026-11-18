@@ -7,7 +7,9 @@ import { roundTypeInfo } from '@/shared/lib/roundTypes';
 import { findTeam, usesTeamMode } from '@/shared/lib/teams';
 import { formatCountdown } from '@/shared/lib/time';
 import { useCountdown } from '@/shared/lib/useCountdown';
+import { useRecentGamesStore } from '@/shared/session/recentGamesStore';
 import { useSessionStore, type PlayerSession } from '@/shared/session/sessionStore';
+import { buttonVariants } from '@/shared/ui/buttonVariants';
 import { Card, CardTitle } from '@/shared/ui/card';
 import { ErrorMessage } from '@/shared/ui/ErrorMessage';
 import { PageLayout } from '@/shared/ui/PageLayout';
@@ -18,7 +20,7 @@ import { TeamScoreboard } from '@/shared/ui/TeamScoreboard';
 
 import { AnswerForm } from './AnswerForm';
 import { foundParts } from './playerGameState';
-import { usePlayerGame } from './usePlayerGame';
+import { isGoneError, usePlayerGame } from './usePlayerGame';
 
 const Found = ({ label, found }: { label: string; found: boolean }) => (
   <span
@@ -51,30 +53,53 @@ const SongProgress = ({ song, answers }: { song: SongDto; answers: readonly Answ
 const PlayerGame = ({ session }: { session: PlayerSession }) => {
   const { t } = useTranslation();
   const { state, rejoinError, submitAnswer } = usePlayerGame(session);
+  const forget = useRecentGamesStore((s) => s.forget);
+  const leave = () => forget(session.gameId);
   const song = state?.currentSong ?? null;
   const open = song !== null && !song.revealed;
   const hasAnswered = (state?.myAnswers.length ?? 0) > 0;
   const remaining = useCountdown(open ? song.startedAt + song.answerTimeSec * 1000 : null);
 
+  if (isGoneError(rejoinError)) {
+    return (
+      <Card className="flex flex-col items-start gap-3">
+        <CardTitle className="mb-0">{t('player.gameGoneTitle')}</CardTitle>
+        <p>{t('player.gameGone')}</p>
+        <Link to="/" className={buttonVariants()} onClick={leave}>
+          {t('common.backHome')}
+        </Link>
+      </Card>
+    );
+  }
   if (rejoinError) return <ErrorMessage error={rejoinError} />;
   if (!state) return <p className="text-muted-foreground">{t('common.connecting')}</p>;
 
   if (state.status === 'finished') {
     // The recap follows `game:finished` by a few ms; the plain scores fill the gap.
-    if (state.recap) {
-      return (
-        <Recap
-          recap={state.recap}
-          playerId={state.player.id}
-          {...(state.myTeamId && { teamId: state.myTeamId })}
-        />
-      );
-    }
     return (
-      <Card>
-        <CardTitle>{t('player.finalScores', { name: state.name })}</CardTitle>
-        <Scoreboard scores={state.scoreboard} playerId={state.player.id} />
-      </Card>
+      <>
+        <Card role="status" className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <CardTitle className="mb-0">{t('player.gameOverTitle')}</CardTitle>
+            <p className="text-sm text-muted-foreground">{t('player.gameOver')}</p>
+          </div>
+          <Link to="/" className={buttonVariants({ variant: 'outline' })} onClick={leave}>
+            {t('common.backHome')}
+          </Link>
+        </Card>
+        {state.recap ? (
+          <Recap
+            recap={state.recap}
+            playerId={state.player.id}
+            {...(state.myTeamId && { teamId: state.myTeamId })}
+          />
+        ) : (
+          <Card>
+            <CardTitle>{t('player.finalScores', { name: state.name })}</CardTitle>
+            <Scoreboard scores={state.scoreboard} playerId={state.player.id} />
+          </Card>
+        )}
+      </>
     );
   }
 
@@ -202,12 +227,21 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
 export const PlayerGamePage = () => {
   const { t } = useTranslation();
   const { gameId } = useParams();
-  const session = useSessionStore((s) => s.player);
+  const tabSession = useSessionStore((s) => s.player);
+  const recent = useRecentGamesStore((s) => s.games.find((g) => g.gameId === gameId));
+  // The tab's session first; else the one remembered by this browser (closed tab, shared link).
+  const session = tabSession?.gameId === gameId ? tabSession : recent;
 
   return (
     <PageLayout>
-      {session && session.gameId === gameId ? (
-        <PlayerGame session={session} />
+      {session ? (
+        <PlayerGame
+          session={{
+            gameId: session.gameId,
+            playerId: session.playerId,
+            playerName: session.playerName,
+          }}
+        />
       ) : (
         <p>
           {t('player.notJoined')} <Link to="/">{t('player.joinAGame')}</Link>

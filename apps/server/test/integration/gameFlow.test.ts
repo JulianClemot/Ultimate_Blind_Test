@@ -168,6 +168,7 @@ describe('blind test (HTTP + Socket.IO)', () => {
       CORS_ORIGIN: '*',
       DEEZER_API_URL: fakeDeezer.url,
       DATABASE_PATH: ':memory:',
+      IDLE_GAME_TIMEOUT_MIN: 120,
       LOG_LEVEL: 'silent',
     });
     baseUrl = await server.start();
@@ -984,6 +985,70 @@ describe('blind test (HTTP + Socket.IO)', () => {
     });
     await host.emitWithAck('song:reveal');
     expect(await host.emitWithAck('game:finish')).toMatchObject({ ok: true });
+  });
+
+  it('tells a player over HTTP whether their party is still on', async () => {
+    const { party, host } = await launchParty([round('42', 'classic'), round('7', 'classic')]);
+    const joined = await (
+      await openSocket()
+    ).emitWithAck('player:join', { code: party.code, playerName: 'Alice' });
+    const playerId = joined.ok ? joined.data.player.id : '';
+    const status = (id: string, player: string) =>
+      api<{ status?: string; code?: string }>('GET', `/api/games/${id}/status?playerId=${player}`);
+
+    expect(await status(party.gameId, playerId)).toMatchObject({
+      status: 200,
+      body: { status: 'lobby' },
+    });
+    await host.emitWithAck('song:next');
+    expect((await status(party.gameId, playerId)).body).toEqual({ status: 'playing' });
+    await host.emitWithAck('song:reveal');
+    await host.emitWithAck('game:finish');
+    expect((await status(party.gameId, playerId)).body).toEqual({ status: 'finished' });
+
+    // Only a player of the game may ask, and only about a game that exists.
+    expect(await status(party.gameId, 'stranger')).toMatchObject({
+      status: 422,
+      body: { code: 'UNKNOWN_PLAYER' },
+    });
+    expect(await status('missing', playerId)).toMatchObject({
+      status: 404,
+      body: { code: 'GAME_NOT_FOUND' },
+    });
+    expect((await api('GET', `/api/games/${party.gameId}/status`)).status).toBe(400);
+  });
+
+  it('lets the host close the party mid-song and tells the players, who see it over', async () => {
+    const { party, host } = await launchParty([round('42', 'classic'), round('7', 'classic')]);
+    const player = await openSocket();
+    const joined = await player.emitWithAck('player:join', {
+      code: party.code,
+      playerName: 'Alice',
+    });
+    await host.emitWithAck('song:next');
+
+    // The song is still open: a plain finish refuses, closing does not.
+    expect(await host.emitWithAck('game:finish')).toMatchObject({
+      ok: false,
+      error: { code: 'SONG_IN_PROGRESS' },
+    });
+    const told = nextEvent(player, 'game:finished');
+    const recap = nextEvent(player, 'game:recap');
+    expect(await host.emitWithAck('game:close')).toMatchObject({ ok: true });
+    expect(await told).toEqual([expect.objectContaining({ playerName: 'Alice' })]);
+    expect(await recap).toMatchObject({ gameName: 'Party' });
+
+    const playerId = joined.ok ? joined.data.player.id : '';
+    expect(
+      (await api('GET', `/api/games/${party.gameId}/status?playerId=${playerId}`)).body,
+    ).toEqual({ status: 'finished' });
+    expect(await host.emitWithAck('game:close')).toMatchObject({
+      ok: false,
+      error: { code: 'GAME_FINISHED' },
+    });
+
+    const stranger = await openSocket();
+    expect(await stranger.emitWithAck('game:close')).toMatchObject({ ok: false });
   });
 
   it('rejects host actions from non-host sockets', async () => {

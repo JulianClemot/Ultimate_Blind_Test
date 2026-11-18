@@ -44,6 +44,8 @@ export interface GameGateway {
   renameTeam(payload: RenameTeamPayload): Promise<readonly TeamDto[]>;
   movePlayers(payload: MovePlayersPayload): Promise<readonly TeamDto[]>;
   finishGame(): Promise<readonly ScoreDto[]>;
+  /** Ends the game for everyone right now, even mid-song. */
+  closeGame(): Promise<readonly ScoreDto[]>;
   joinGame(payload: JoinGamePayload): Promise<PlayerSessionDto>;
   rejoinGame(payload: RejoinGamePayload): Promise<PlayerSessionDto>;
   submitAnswer(payload: SubmitAnswerPayload): Promise<AnswerDto>;
@@ -75,6 +77,7 @@ export const createSocketGameGateway = (socket: GameSocket): GameGateway => {
     renameTeam: (payload) => request<readonly TeamDto[]>('teams:rename', payload),
     movePlayers: (payload) => request<readonly TeamDto[]>('teams:move-players', payload),
     finishGame: () => request<readonly ScoreDto[]>('game:finish'),
+    closeGame: () => request<readonly ScoreDto[]>('game:close'),
     joinGame: (payload) => request<PlayerSessionDto>('player:join', payload),
     rejoinGame: (payload) => request<PlayerSessionDto>('player:rejoin', payload),
     submitAnswer: (payload) => request<AnswerDto>('answer:submit', payload),

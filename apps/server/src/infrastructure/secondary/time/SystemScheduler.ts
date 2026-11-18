@@ -9,4 +9,11 @@ export class SystemScheduler implements Scheduler {
     }, delayMs);
     timer.unref();
   }
+
+  every(intervalMs: number, task: () => Promise<void>): void {
+    const timer = setInterval(() => {
+      task().catch(this.onError);
+    }, intervalMs);
+    timer.unref();
+  }
 }

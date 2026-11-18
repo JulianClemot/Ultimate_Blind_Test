@@ -117,6 +117,11 @@ These rules are enforced by `pnpm depcruise` (`.dependency-cruiser.cjs`) in CI.
   `SystemClock` uses `performance.timeOrigin + performance.now()`: monotonic and sub-millisecond,
   immune to NTP jumps. `elapsedMs = receivedAt − round.startedAt`. The client's `clientSentAt` is
   stored for diagnostics only (client clocks drift and can be tampered with).
+- **Coming back**: players keep the parties they joined in `localStorage` (`recentGamesStore`,
+  3 max, 24 h), so the home page lists them with a way back and `/play/:gameId` works in a new tab.
+  The list asks `GET /api/games/:gameId/status?playerId=` (`GetGameStatus`: only a player of the game
+  gets an answer, status only) to flag a finished party ("See results") and to drop a vanished one
+  (`GAME_NOT_FOUND`). A failed check changes nothing.
 - Clients re-identify on every `connect` (`useOnConnect`), so a phone going to sleep or a page
   refresh resumes the game (session kept in `sessionStorage`).
 

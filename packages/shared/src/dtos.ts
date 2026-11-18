@@ -310,6 +310,10 @@ export interface CreateGameResponseDto {
   readonly hostToken: string;
 }
 
+export interface GameStatusResponseDto {
+  readonly status: GameStatusDto;
+}
+
 /** What a player is allowed to see: never the other players' answers. */
 export interface PlayerSessionDto {
   readonly gameId: string;

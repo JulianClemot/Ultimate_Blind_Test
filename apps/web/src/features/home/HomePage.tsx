@@ -12,6 +12,8 @@ import { PageLayout } from '@/shared/ui/PageLayout';
 
 import { JoinForm } from '../player/JoinForm';
 import { MyGames } from './MyGames';
+import { ResumeGames } from './ResumeGames';
+import { ResumeHosting } from './ResumeHosting';
 
 const CreateDesignForm = () => {
   const { t } = useTranslation();
@@ -58,11 +60,13 @@ export const HomePage = () => {
         <Card>
           <CardTitle>{t('home.hostTitle')}</CardTitle>
           <p className="mb-4 text-sm text-muted-foreground">{t('home.hostIntro')}</p>
+          <ResumeHosting />
           <CreateDesignForm />
           <MyGames />
         </Card>
         <Card>
           <CardTitle>{t('home.joinTitle')}</CardTitle>
+          <ResumeGames />
           <JoinForm
             initialCode={searchParams.get('code') ?? ''}
             onJoined={(session) => void navigate(`/play/${session.gameId}`)}

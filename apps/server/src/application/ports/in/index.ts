@@ -111,6 +111,9 @@ export interface RejoinGameCommand {
 }
 export type RejoinGameUseCase = UseCase<RejoinGameCommand, PlayerSession>;
 
+export type GetGameStatusCommand = RejoinGameCommand;
+export type GetGameStatusUseCase = UseCase<GetGameStatusCommand, Game['status']>;
+
 /** Either a new song started, or every round was played and the game is now finished. */
 export type NextSongResult =
   | { readonly kind: 'song'; readonly game: Game; readonly song: Song }
@@ -124,6 +127,14 @@ export interface RevealedSong {
 export type RevealSongUseCase = UseCase<HostCommand, RevealedSong>;
 
 export type FinishGameUseCase = UseCase<HostCommand, Game>;
+
+/** Ends the party at once, even mid-song. */
+export type CloseGameUseCase = UseCase<HostCommand, Game>;
+
+/** Closes the parties nobody touched for a while; resolves with how many were closed. */
+export interface FinishIdleGamesUseCase {
+  execute(): Promise<number>;
+}
 
 export interface JudgeAnswerCommand extends HostCommand {
   readonly answerId: string;

@@ -18,8 +18,11 @@ import type { RoundPlanInput } from '../ports/in';
 import { AttachHost } from './AttachHost';
 import { AutoRevealSong } from './AutoRevealSong';
 import { CreateGameDesign } from './CreateGameDesign';
+import { CloseGame } from './CloseGame';
 import { FinishGame } from './FinishGame';
+import { FinishIdleGames } from './FinishIdleGames';
 import { GenerateTeams } from './GenerateTeams';
+import { GetGameStatus } from './GetGameStatus';
 import { JoinGame } from './JoinGame';
 import { JudgeAnswer } from './JudgeAnswer';
 import { LaunchGame } from './LaunchGame';
@@ -161,6 +164,80 @@ describe('party use cases', () => {
         playerName: 'Bob',
       });
       expect(!unknown.ok && unknown.error.code).toBe('GAME_NOT_FOUND');
+    });
+  });
+
+  describe('CloseGame', () => {
+    it('ends the party for everyone even mid-song, at the host request only', async () => {
+      const { game, host } = await launch();
+      unwrap(await nextSong(host));
+      expect((await new CloseGame(games, events).execute({ ...host, hostToken: 'nope' })).ok).toBe(
+        false,
+      );
+      events.events.length = 0;
+
+      unwrap(await new CloseGame(games, events).execute(host));
+      expect(game.status).toBe('finished');
+      expect(events.types()).toContain('gameFinished');
+      const again = await new CloseGame(games, events).execute(host);
+      expect(!again.ok && again.error.code).toBe('GAME_FINISHED');
+    });
+  });
+
+  describe('FinishIdleGames', () => {
+    const TIMEOUT = 60_000;
+
+    it('closes the parties nobody touched for the timeout, and only those', async () => {
+      games = new InMemoryGameRepository(clock);
+      const { game: stale } = await launch();
+      clock.advance(TIMEOUT);
+      codes = new StubGameCodeGenerator(['GHJKMN']);
+      const { game: fresh } = await launch();
+      events.events.length = 0;
+
+      const closed = await new FinishIdleGames(games, clock, events, TIMEOUT).execute();
+
+      expect(closed).toBe(1);
+      expect(stale.status).toBe('finished');
+      expect(fresh.status).toBe('lobby');
+      expect(events.types()).toEqual(['gameFinished']);
+      // Already over: nothing more to do.
+      expect(await new FinishIdleGames(games, clock, events, TIMEOUT).execute()).toBe(0);
+    });
+
+    it('counts any change of the party as activity', async () => {
+      games = new InMemoryGameRepository(clock);
+      await launch();
+      clock.advance(TIMEOUT - 1);
+      unwrap(await join('Alice'));
+      clock.advance(2);
+      expect(await new FinishIdleGames(games, clock, events, TIMEOUT).execute()).toBe(0);
+    });
+  });
+
+  describe('GetGameStatus', () => {
+    const status = (gameId: string, playerId: string) =>
+      new GetGameStatus(games).execute({ gameId, playerId });
+
+    it('follows the party from the lobby to its end, for a player of the game', async () => {
+      const { game, host } = await launch();
+      const { player } = unwrap(await join('Alice'));
+      expect(unwrap(await status(game.id, player.id))).toBe('lobby');
+
+      unwrap(await new NextSong(games, ids, clock, events, catalog, random).execute(host));
+      expect(unwrap(await status(game.id, player.id))).toBe('playing');
+
+      unwrap(await new RevealSong(games, clock, events).execute(host));
+      unwrap(await new FinishGame(games, events).execute(host));
+      expect(unwrap(await status(game.id, player.id))).toBe('finished');
+    });
+
+    it('does not tell a stranger, nor about a game that does not exist', async () => {
+      const { game } = await launch();
+      const stranger = await status(game.id, 'nobody');
+      expect(!stranger.ok && stranger.error.code).toBe('UNKNOWN_PLAYER');
+      const missing = await status('nope', 'nobody');
+      expect(!missing.ok && missing.error.code).toBe('GAME_NOT_FOUND');
     });
   });
 

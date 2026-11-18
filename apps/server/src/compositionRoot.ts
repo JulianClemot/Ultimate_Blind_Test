@@ -8,13 +8,16 @@ import {
   AttachHost,
   AutoRevealSong,
   CheckPlaylist,
+  CloseGame,
   CreateGameDesign,
   DeleteGameDesign,
   FinishGame,
+  FinishIdleGames,
   GenerateTeams,
   MovePlayers,
   RenameTeam,
   GetGameDesign,
+  GetGameStatus,
   JoinGame,
   JudgeAnswer,
   LaunchGame,
@@ -44,6 +47,8 @@ import { MetadataSourceResolver } from './infrastructure/secondary/sources/Metad
 import { SystemClock } from './infrastructure/secondary/time/SystemClock';
 import { SystemScheduler } from './infrastructure/secondary/time/SystemScheduler';
 
+const IDLE_SWEEP_INTERVAL_MS = 5 * 60_000;
+
 export interface AppServer {
   readonly http: FastifyInstance;
   readonly io: GameServer;
@@ -66,10 +71,10 @@ export const createAppServer = async (config: AppConfig): Promise<AppServer> => 
   const io: GameServer = new Server(http.server, { cors: { origin: config.CORS_ORIGIN } });
 
   const designs = new SqliteGameDesignRepository(config.DATABASE_PATH);
-  const games = new InMemoryGameRepository();
   const ids = new CryptoIdGenerator();
   const codes = new RandomGameCodeGenerator();
   const clock = new SystemClock();
+  const games = new InMemoryGameRepository(clock);
   const events = new SocketIoGameEventPublisher(io);
   const catalog = new DeezerMusicCatalog(config.DEEZER_API_URL);
   const random = new CryptoRandomGenerator();
@@ -103,12 +108,26 @@ export const createAppServer = async (config: AppConfig): Promise<AppServer> => 
     movePlayers: new MovePlayers(games, events),
     joinGame: new JoinGame(games, ids, clock, events),
     rejoinGame: new RejoinGame(games),
+    getGameStatus: new GetGameStatus(games),
     nextSong: new NextSong(games, ids, clock, events, catalog, random, analyzer),
     revealSong: new RevealSong(games, clock, events),
     judgeAnswer: new JudgeAnswer(games, events),
     finishGame: new FinishGame(games, events),
+    closeGame: new CloseGame(games, events),
     submitAnswer: new SubmitAnswer(games, ids, clock, events, scheduler, autoRevealSong),
   };
+
+  // A host who walks away without ending the party must not leave it joinable forever.
+  const finishIdleGames = new FinishIdleGames(
+    games,
+    clock,
+    events,
+    config.IDLE_GAME_TIMEOUT_MIN * 60_000,
+  );
+  scheduler.every(IDLE_SWEEP_INTERVAL_MS, async () => {
+    const closed = await finishIdleGames.execute();
+    if (closed > 0) http.log.info({ closed }, 'closed idle games');
+  });
 
   registerHealthRoutes(http);
   registerNetworkRoutes(http);

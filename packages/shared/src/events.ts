@@ -42,6 +42,8 @@ export interface ClientToServerEvents {
   /** Lobby only: puts players in another team, all or none (a team is never left empty). */
   'teams:move-players': (payload: MovePlayersPayload, ack: Ack<readonly TeamDto[]>) => void;
   'game:finish': (ack: Ack<readonly ScoreDto[]>) => void;
+  /** Ends the game right now for everyone, even before the current song is revealed. */
+  'game:close': (ack: Ack<readonly ScoreDto[]>) => void;
   'player:join': (payload: JoinGamePayload, ack: Ack<PlayerSessionDto>) => void;
   'player:rejoin': (payload: RejoinGamePayload, ack: Ack<PlayerSessionDto>) => void;
   'answer:submit': (payload: SubmitAnswerPayload, ack: Ack<AnswerDto>) => void;

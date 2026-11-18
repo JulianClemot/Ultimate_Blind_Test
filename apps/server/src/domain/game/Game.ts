@@ -326,6 +326,16 @@ export class Game {
     return ok(undefined);
   }
 
+  /**
+   * Ends the party right now, even while a song is being played (the host leaves, or nobody
+   * has been around for hours). The open song is left unrevealed.
+   */
+  close(): Result<void, GameError> {
+    if (this.finished) return err(gameError('GAME_FINISHED', 'This game is over'));
+    this.finished = true;
+    return ok(undefined);
+  }
+
   submitAnswer({ suggestionId, ...command }: GameSubmitAnswerCommand): Result<Answer, GameError> {
     if (!this.players.has(command.playerId)) {
       return err(gameError('UNKNOWN_PLAYER', 'Player is not part of this game'));

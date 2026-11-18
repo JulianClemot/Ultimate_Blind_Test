@@ -4,4 +4,6 @@ export interface GameRepository {
   save(game: Game): Promise<void>;
   findById(id: string): Promise<Game | undefined>;
   findByCode(code: GameCode): Promise<Game | undefined>;
+  /** Unfinished games last saved at or before `cutoff` (epoch ms). */
+  findIdleSince(cutoff: number): Promise<readonly Game[]>;
 }

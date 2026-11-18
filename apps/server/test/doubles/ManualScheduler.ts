@@ -8,6 +8,12 @@ export class ManualScheduler implements Scheduler {
     this.scheduled.push({ delayMs, task });
   }
 
+  readonly recurring: { intervalMs: number; task: () => Promise<void> }[] = [];
+
+  every(intervalMs: number, task: () => Promise<void>): void {
+    this.recurring.push({ intervalMs, task });
+  }
+
   /** Runs and clears every pending task. */
   async runAll(): Promise<void> {
     const tasks = this.scheduled.splice(0);
