@@ -149,7 +149,7 @@ describe('party use cases', () => {
     it('adds players, notifies the host and restores sessions', async () => {
       const { game } = await launch();
       const { player } = unwrap(await join('Alice'));
-      expect(events.types()).toEqual(['playerJoined']);
+      expect(events.types()).toEqual(['playerJoined', 'scoreboardUpdated']);
       const session = unwrap(
         await new RejoinGame(games).execute({ gameId: game.id, playerId: player.id }),
       );
@@ -436,7 +436,11 @@ describe('party use cases', () => {
       const { player } = unwrap(await join('Chloé'));
 
       expect(game.teamOf(player.id)).toBeDefined();
-      expect(events.types().slice(-2)).toEqual(['playerJoined', 'teamsUpdated']);
+      expect(events.types().slice(-3)).toEqual([
+        'playerJoined',
+        'scoreboardUpdated',
+        'teamsUpdated',
+      ]);
     });
   });
 });

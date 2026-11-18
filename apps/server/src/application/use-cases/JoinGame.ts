@@ -29,6 +29,8 @@ export class JoinGame implements JoinGameUseCase {
 
     await this.games.save(game);
     this.events.playerJoined(game, player.value);
+    // Everyone's list of participants (the lobby ranking) must include the newcomer.
+    this.events.scoreboardUpdated(game);
     if (game.hasTeams) this.events.teamsUpdated(game);
     return ok({ game, player: player.value });
   }
