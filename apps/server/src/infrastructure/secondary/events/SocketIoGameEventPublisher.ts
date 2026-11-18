@@ -21,6 +21,14 @@ export class SocketIoGameEventPublisher implements GameEventPublisher {
     this.io.to(rooms.hosts(game.id)).emit('player:joined', toPlayerDto(player));
   }
 
+  playerKicked(game: Game, player: Player): void {
+    // The kicked player's own sockets are still in the room: they hear it, then are shut out.
+    this.io.to(rooms.game(game.id)).emit('player:kicked', { playerId: player.id });
+    this.io
+      .in(rooms.player(game.id, player.id))
+      .socketsLeave([rooms.game(game.id), rooms.player(game.id, player.id)]);
+  }
+
   teamsUpdated(game: Game): void {
     this.io.to(rooms.game(game.id)).emit('teams:updated', toTeamDtos(game));
   }

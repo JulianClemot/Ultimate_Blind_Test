@@ -45,6 +45,31 @@ describe('<PlayerGamePage />', () => {
     expect(overview).toHaveTextContent('Only the first 4 s of each song are played');
   });
 
+  it('tells a removed player so, and forgets the game', async () => {
+    useRecentGamesStore.setState({
+      games: [
+        {
+          gameId: 'g1',
+          playerId: 'p1',
+          playerName: 'Alice',
+          gameName: 'Friday night',
+          code: 'ABCDEF',
+          savedAt: Date.now(),
+        },
+      ],
+    });
+    const { emit } = renderPage(playerSession());
+    await screen.findByText('Waiting for the host to play the first song…');
+
+    emit('player:kicked', { playerId: 'p2' });
+    expect(screen.queryByText('You were removed from the game')).not.toBeInTheDocument();
+
+    emit('player:kicked', { playerId: 'p1' });
+    expect(await screen.findByText('You were removed from the game')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Back home' })).toBeVisible();
+    expect(useRecentGamesStore.getState().games).toHaveLength(0);
+  });
+
   it('hides the overview once a song is playing', async () => {
     renderPage(
       playerSession({

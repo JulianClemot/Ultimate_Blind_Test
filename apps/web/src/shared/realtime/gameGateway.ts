@@ -8,8 +8,10 @@ import type {
   GenerateTeamsPayload,
   JoinGamePayload,
   JudgeAnswerPayload,
+  KickPlayerPayload,
   MovePlayersPayload,
   NextSongResponseDto,
+  PlayerDto,
   PlayerSessionDto,
   RejoinGamePayload,
   RenameTeamPayload,
@@ -43,6 +45,8 @@ export interface GameGateway {
   generateTeams(payload: GenerateTeamsPayload): Promise<readonly TeamDto[]>;
   renameTeam(payload: RenameTeamPayload): Promise<readonly TeamDto[]>;
   movePlayers(payload: MovePlayersPayload): Promise<readonly TeamDto[]>;
+  /** Removes a player, at any time before the end. */
+  kickPlayer(payload: KickPlayerPayload): Promise<PlayerDto>;
   finishGame(): Promise<readonly ScoreDto[]>;
   /** Ends the game for everyone right now, even mid-song. */
   closeGame(): Promise<readonly ScoreDto[]>;
@@ -76,6 +80,7 @@ export const createSocketGameGateway = (socket: GameSocket): GameGateway => {
     generateTeams: (payload) => request<readonly TeamDto[]>('teams:generate', payload),
     renameTeam: (payload) => request<readonly TeamDto[]>('teams:rename', payload),
     movePlayers: (payload) => request<readonly TeamDto[]>('teams:move-players', payload),
+    kickPlayer: (payload) => request<PlayerDto>('player:kick', payload),
     finishGame: () => request<readonly ScoreDto[]>('game:finish'),
     closeGame: () => request<readonly ScoreDto[]>('game:close'),
     joinGame: (payload) => request<PlayerSessionDto>('player:join', payload),

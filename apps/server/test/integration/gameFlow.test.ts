@@ -1051,6 +1051,69 @@ describe('blind test (HTTP + Socket.IO)', () => {
     expect(await stranger.emitWithAck('game:close')).toMatchObject({ ok: false });
   });
 
+  it('lets the host kick a player at any time: they are told, shut out and cannot come back', async () => {
+    const { party, host } = await launchParty([round('42', 'classic'), round('7', 'classic')]);
+    const alice = await openSocket();
+    const bob = await openSocket();
+    const joined = await alice.emitWithAck('player:join', {
+      code: party.code,
+      playerName: 'Alice',
+    });
+    await bob.emitWithAck('player:join', { code: party.code, playerName: 'Bob' });
+    const aliceId = joined.ok ? joined.data.player.id : '';
+    await host.emitWithAck('song:next');
+
+    const aliceTold = nextEvent(alice, 'player:kicked');
+    const bobTold = nextEvent(bob, 'player:kicked');
+    const hostTold = nextEvent(host, 'player:kicked');
+    expect(await host.emitWithAck('player:kick', { playerId: aliceId })).toMatchObject({
+      ok: true,
+      data: { id: aliceId, name: 'Alice' },
+    });
+    expect(await aliceTold).toEqual({ playerId: aliceId });
+    expect(await bobTold).toEqual({ playerId: aliceId });
+    expect(await hostTold).toEqual({ playerId: aliceId });
+
+    // Out of the game: no more answers, no way back, not even with the same name.
+    expect(await alice.emitWithAck('answer:submit', { text: 'x', clientSentAt: 1 })).toMatchObject({
+      ok: false,
+      error: { code: 'UNKNOWN_PLAYER' },
+    });
+    expect(
+      await (
+        await openSocket()
+      ).emitWithAck('player:rejoin', {
+        gameId: party.gameId,
+        playerId: aliceId,
+      }),
+    ).toMatchObject({ ok: false, error: { code: 'UNKNOWN_PLAYER' } });
+    expect(
+      await (
+        await openSocket()
+      ).emitWithAck('player:join', {
+        code: party.code,
+        playerName: 'ALICE',
+      }),
+    ).toMatchObject({ ok: false, error: { code: 'PLAYER_KICKED' } });
+
+    // Later pushes (the reveal) no longer reach the kicked socket.
+    const received: unknown[] = [];
+    alice.on('song:revealed', (reveal) => received.push(reveal));
+    const bobSees = nextEvent(bob, 'song:revealed');
+    await host.emitWithAck('song:reveal');
+    await bobSees;
+    expect(received).toHaveLength(0);
+
+    expect(await bob.emitWithAck('player:kick', { playerId: aliceId })).toMatchObject({
+      ok: false,
+      error: { code: 'NOT_IDENTIFIED' },
+    });
+    expect(await host.emitWithAck('player:kick', { playerId: '' })).toMatchObject({
+      ok: false,
+      error: { code: 'INVALID_PAYLOAD' },
+    });
+  });
+
   it('rejects host actions from non-host sockets', async () => {
     const stranger = await openSocket();
     for (const event of ['song:next', 'song:reveal', 'game:finish'] as const) {

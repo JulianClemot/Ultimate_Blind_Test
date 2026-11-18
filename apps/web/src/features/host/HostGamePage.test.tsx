@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { GatewayError, type GameGateway } from '@/shared/realtime/gameGateway';
 import { useSessionStore } from '@/shared/session/sessionStore';
-import { gameRecap, hostSong, snapshot } from '@/test/fixtures';
+import { answer, gameRecap, hostSong, snapshot } from '@/test/fixtures';
 import { fakeGateway, renderWithRealtime } from '@/test/renderWithRealtime';
 
 import { HostGamePage } from './HostGamePage';
@@ -62,6 +62,70 @@ describe('<HostGamePage />', () => {
 
     expect(await screen.findByText('Song 1/2')).toBeInTheDocument();
     expect(screen.queryByText(/^The game ·/)).not.toBeInTheDocument();
+  });
+
+  describe('removing a player', () => {
+    const two = [
+      { id: 'p1', name: 'Alice' },
+      { id: 'p2', name: 'Bob' },
+    ];
+    const kick = async (name: string) => {
+      await userEvent.click(
+        await screen.findByRole('button', { name: `Remove ${name} from the game` }),
+      );
+      await userEvent.click(screen.getByRole('button', { name: `Remove ${name}?` }));
+    };
+
+    it('kicks a player from the lobby', async () => {
+      const kickPlayer = vi.fn().mockResolvedValue(two[0]);
+      renderPage(snapshot({ players: two }), { kickPlayer });
+
+      await kick('Alice');
+
+      expect(kickPlayer).toHaveBeenCalledWith({ playerId: 'p1' });
+      await waitFor(() =>
+        expect(screen.queryByRole('button', { name: 'Remove Alice from the game' })).toBeNull(),
+      );
+      expect(screen.getByText('Players (1)')).toBeVisible();
+    });
+
+    it('can still kick while a song is playing, and drops the answer of the player', async () => {
+      const kickPlayer = vi.fn().mockResolvedValue(two[0]);
+      renderPage(
+        snapshot({
+          status: 'playing',
+          currentSong: hostSong({ startedAt: Date.now() }),
+          players: two,
+          answers: [answer({ playerId: 'p1', playerName: 'Alice', text: 'Daft' })],
+        }),
+        { kickPlayer },
+      );
+      expect(await screen.findByText('Daft')).toBeVisible();
+
+      await kick('Alice');
+
+      await waitFor(() => expect(screen.queryByText('Daft')).not.toBeInTheDocument());
+    });
+
+    it('drops a player the server announced as kicked', async () => {
+      const { emit } = renderPage(snapshot({ players: two }));
+      await screen.findByText('Players (2)');
+
+      emit('player:kicked', { playerId: 'p2' });
+
+      expect(await screen.findByText('Players (1)')).toBeVisible();
+    });
+
+    it('says why a player could not be removed', async () => {
+      const kickPlayer = vi
+        .fn()
+        .mockRejectedValue(new GatewayError({ code: 'GAME_FINISHED', message: 'over' }));
+      renderPage(snapshot({ players: two }), { kickPlayer });
+
+      await kick('Bob');
+
+      expect(await screen.findByText('This game is over')).toBeVisible();
+    });
   });
 
   describe('leaving a game that is on', () => {

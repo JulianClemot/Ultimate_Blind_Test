@@ -2,6 +2,7 @@ import {
   attachHostPayloadSchema,
   generateTeamsPayloadSchema,
   judgeAnswerPayloadSchema,
+  kickPlayerPayloadSchema,
   movePlayersPayloadSchema,
   renameTeamPayloadSchema,
   type NextSongResponseDto,
@@ -14,6 +15,7 @@ import type {
   FinishGameUseCase,
   GenerateTeamsUseCase,
   JudgeAnswerUseCase,
+  KickPlayerUseCase,
   MovePlayersUseCase,
   NextSongResult,
   NextSongUseCase,
@@ -24,6 +26,7 @@ import {
   toAnswerDto,
   toGameSnapshotDto,
   toHostSongDto,
+  toPlayerDto,
   toPublicScoreboard,
   toRevealDto,
   toTeamDtos,
@@ -37,6 +40,7 @@ export interface HostUseCases {
   readonly generateTeams: GenerateTeamsUseCase;
   readonly renameTeam: RenameTeamUseCase;
   readonly movePlayers: MovePlayersUseCase;
+  readonly kickPlayer: KickPlayerUseCase;
   readonly nextSong: NextSongUseCase;
   readonly revealSong: RevealSongUseCase;
   readonly judgeAnswer: JudgeAnswerUseCase;
@@ -108,6 +112,18 @@ export const registerHostHandlers = (
 
       const result = await useCases.movePlayers.execute({ ...session, ...input.value });
       return fromResult(result, toTeamDtos);
+    }),
+  );
+
+  socket.on('player:kick', (payload, ack) =>
+    respond(ack, logger, async () => {
+      const session = hostSession();
+      if (!session) return notIdentified();
+      const input = parsePayload(kickPlayerPayloadSchema, payload);
+      if (!input.ok) return input.response;
+
+      const result = await useCases.kickPlayer.execute({ ...session, ...input.value });
+      return fromResult(result, ({ player }) => toPlayerDto(player));
     }),
   );
 

@@ -17,6 +17,7 @@ export type HostGameState = GameSnapshotDto | null;
 export type HostGameAction =
   | { type: 'attached'; snapshot: GameSnapshotDto }
   | { type: 'playerJoined'; player: PlayerDto }
+  | { type: 'playerKicked'; playerId: string }
   | { type: 'teamsUpdated'; teams: readonly TeamDto[] }
   | { type: 'teamScoresUpdated'; teamScoreboard: readonly TeamScoreDto[] }
   | { type: 'songStarted'; song: HostSongDto }
@@ -49,6 +50,13 @@ export const hostGameReducer = (state: HostGameState, action: HostGameAction): H
               { playerId: action.player.id, playerName: action.player.name, points: 0 },
             ],
           };
+    case 'playerKicked':
+      return {
+        ...state,
+        players: state.players.filter((p) => p.id !== action.playerId),
+        scoreboard: state.scoreboard.filter((s) => s.playerId !== action.playerId),
+        answers: state.answers.filter((a) => a.playerId !== action.playerId),
+      };
     case 'teamsUpdated':
       return { ...state, teams: action.teams };
     case 'teamScoresUpdated':

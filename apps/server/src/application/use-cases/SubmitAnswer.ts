@@ -1,4 +1,4 @@
-import { err, ok, type Game, type Result } from '../../domain';
+import { err, ok, type Result } from '../../domain';
 import { gameNotFound, type UseCaseError } from '../errors';
 import type {
   AutoRevealSongUseCase,
@@ -13,10 +13,11 @@ import type {
   IdGenerator,
   Scheduler,
 } from '../ports/out';
+import { REVEAL_DELAY_MS, revealOnceEveryoneAnswered } from './revealOnceEveryoneAnswered';
 
 export class SubmitAnswer implements SubmitAnswerUseCase {
   /** Pause between "everyone answered" and the reveal. */
-  static readonly REVEAL_DELAY_MS = 2000;
+  static readonly REVEAL_DELAY_MS = REVEAL_DELAY_MS;
 
   constructor(
     private readonly games: GameRepository,
@@ -46,18 +47,7 @@ export class SubmitAnswer implements SubmitAnswerUseCase {
 
     await this.games.save(game);
     this.events.answerReceived(game, answer.value);
-    this.revealOnceEveryoneAnswered(game);
+    revealOnceEveryoneAnswered(game, this.events, this.scheduler, this.autoReveal);
     return ok({ game, answer: answer.value });
-  }
-
-  /** Announces that everyone answered, then reveals the song after a short pause. */
-  private revealOnceEveryoneAnswered(game: Game): void {
-    const song = game.currentSong;
-    if (!song || !game.everyoneHasAnswered()) return;
-
-    this.events.allAnswered(game, song);
-    this.scheduler.after(SubmitAnswer.REVEAL_DELAY_MS, async () => {
-      await this.autoReveal.execute({ gameId: game.id, songId: song.id });
-    });
   }
 }

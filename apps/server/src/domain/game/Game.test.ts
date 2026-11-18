@@ -100,6 +100,94 @@ describe('Game', () => {
     });
   });
 
+  describe('removing a player', () => {
+    it('works in the lobby: the player and their team are gone', () => {
+      unwrap(join('p1', 'Alice'));
+      unwrap(join('p2', 'Bob'));
+      const removed = unwrap(game.removePlayer('p1'));
+      expect(removed.name.value).toBe('Alice');
+      expect(game.listPlayers().map((p) => p.id)).toEqual(['p2']);
+      expect(game.findPlayer('p1')).toBeUndefined();
+    });
+
+    it('works while a song is running, and drops their answer from the ranking', () => {
+      unwrap(join('p1', 'Alice'));
+      unwrap(join('p2', 'Bob'));
+      unwrap(startSong());
+      unwrap(answer('p1', T0 + 1, 'Title t1'));
+      unwrap(answer('p2', T0 + 2, 'Title t1'));
+      unwrap(game.removePlayer('p1'));
+      unwrap(game.revealSong(T0 + 10));
+      const [first, ...others] = game.scoreboard({ revealedOnly: true });
+      expect(others).toHaveLength(0);
+      expect(first?.player.id).toBe('p2');
+      // Bob is now the fastest: he gets the points Alice would have taken.
+      expect(first?.points).toBeGreaterThan(0);
+      expect(game.currentSong?.hasAnswered('p1')).toBe(false);
+    });
+
+    it('works between two songs and keeps the other scores', () => {
+      unwrap(join('p1', 'Alice'));
+      unwrap(join('p2', 'Bob'));
+      unwrap(startSong());
+      unwrap(answer('p2', T0 + 2, 'Title t1'));
+      unwrap(game.revealSong(T0 + 10));
+      const before = game.scoreboard({ revealedOnly: true }).find((s) => s.player.id === 'p2');
+      unwrap(game.removePlayer('p1'));
+      const after = game.scoreboard({ revealedOnly: true });
+      expect(after.map((s) => s.player.id)).toEqual(['p2']);
+      expect(after[0]?.points).toBe(before?.points);
+    });
+
+    it('cannot be undone by joining again under the same name', () => {
+      unwrap(join('p1', 'Alice'));
+      unwrap(game.removePlayer('p1'));
+      const again = join('p9', 'alice');
+      expect(!again.ok && again.error.code).toBe('PLAYER_KICKED');
+      expect(join('p10', 'Bob').ok).toBe(true);
+    });
+
+    it('stops the player from answering', () => {
+      unwrap(join('p1', 'Alice'));
+      unwrap(startSong());
+      unwrap(game.removePlayer('p1'));
+      const result = answer('p1', T0 + 1, 'Title t1');
+      expect(!result.ok && result.error.code).toBe('UNKNOWN_PLAYER');
+    });
+
+    it('makes everyone-has-answered true when the last one missing is removed', () => {
+      unwrap(join('p1', 'Alice'));
+      unwrap(join('p2', 'Bob'));
+      unwrap(startSong());
+      unwrap(answer('p1', T0 + 1, 'Title t1'));
+      expect(game.everyoneHasAnswered()).toBe(false);
+      unwrap(game.removePlayer('p2'));
+      expect(game.everyoneHasAnswered()).toBe(true);
+    });
+
+    it('takes the player out of their team', () => {
+      unwrap(join('p1', 'Alice'));
+      unwrap(join('p2', 'Bob'));
+      unwrap(join('p3', 'Chloé'));
+      unwrap(game.generateTeams({ teamCount: 2, random: { nextInt: () => 0 } }));
+      unwrap(game.removePlayer('p1'));
+      const members = game.listTeams().flatMap((team) => game.membersOf(team).map((p) => p.id));
+      expect(members.sort()).toEqual(['p2', 'p3']);
+    });
+
+    it('refuses an unknown player', () => {
+      const result = game.removePlayer('ghost');
+      expect(!result.ok && result.error.code).toBe('UNKNOWN_PLAYER');
+    });
+
+    it('is refused once the game is over', () => {
+      unwrap(join('p1', 'Alice'));
+      unwrap(game.close());
+      const result = game.removePlayer('p1');
+      expect(!result.ok && result.error.code).toBe('GAME_FINISHED');
+    });
+  });
+
   describe('progression', () => {
     const playAndReveal = () => {
       const song = unwrap(startSong());

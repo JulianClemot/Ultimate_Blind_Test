@@ -122,6 +122,9 @@ export const movePlayersPayloadSchema = z.object({
 });
 export type MovePlayersPayload = z.infer<typeof movePlayersPayloadSchema>;
 
+export const kickPlayerPayloadSchema = z.object({ playerId: z.string().min(1) });
+export type KickPlayerPayload = z.infer<typeof kickPlayerPayloadSchema>;
+
 export const submitAnswerPayloadSchema = z.object({
   text: z.string(),
   /** Client wall-clock time (epoch ms) at submission, kept for diagnostics only. */

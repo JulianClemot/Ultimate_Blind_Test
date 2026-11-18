@@ -29,6 +29,26 @@ describe('hostGameReducer', () => {
     expect(twice?.scoreboard).toContainEqual({ playerId: 'p2', playerName: 'Bob', points: 0 });
   });
 
+  it('forgets a kicked player: list, ranking and answer', () => {
+    const state = snapshot({
+      status: 'playing',
+      currentSong: hostSong(),
+      players: [
+        { id: 'p1', name: 'Alice' },
+        { id: 'p2', name: 'Bob' },
+      ],
+      scoreboard: [
+        { playerId: 'p1', playerName: 'Alice', points: 2 },
+        { playerId: 'p2', playerName: 'Bob', points: 1 },
+      ],
+      answers: [answer({ id: 'a1', playerId: 'p1' }), answer({ id: 'a2', playerId: 'p2' })],
+    });
+    const next = hostGameReducer(state, { type: 'playerKicked', playerId: 'p1' });
+    expect(next?.players.map((p) => p.id)).toEqual(['p2']);
+    expect(next?.scoreboard.map((s) => s.playerId)).toEqual(['p2']);
+    expect(next?.answers.map((a) => a.id)).toEqual(['a2']);
+  });
+
   it('starts a song with a clean slate and knows when it is the last one', () => {
     const withAnswer = hostGameReducer(playing, { type: 'answerReceived', answer: answer() });
     const next = hostGameReducer(withAnswer, {

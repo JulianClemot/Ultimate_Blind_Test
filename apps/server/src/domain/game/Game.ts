@@ -73,6 +73,7 @@ export class Game {
   private finished = false;
   private teams: readonly Team[] = [];
   private readonly teamOfPlayer = new Map<string, string>();
+  private readonly kickedNames: PlayerName[] = [];
 
   private constructor(
     readonly id: string,
@@ -143,11 +144,31 @@ export class Game {
     if (this.listPlayers().some((p) => p.name.sameAs(command.name))) {
       return err(gameError('PLAYER_NAME_TAKEN', `"${command.name.value}" is already taken`));
     }
+    if (this.kickedNames.some((kicked) => kicked.sameAs(command.name))) {
+      return err(gameError('PLAYER_KICKED', 'The host removed this player from the game'));
+    }
     const player: Player = { id: command.playerId, name: command.name, joinedAt: command.joinedAt };
     this.players.set(player.id, player);
     // Teams already exist: a latecomer joins the smallest one to keep them even.
     const smallest = this.smallestTeam();
     if (smallest) this.teamOfPlayer.set(player.id, smallest.id);
+    return ok(player);
+  }
+
+  /**
+   * The host kicks a player, at any time before the end. Their answers disappear (so they take no
+   * place from the others), they leave their team, and their name cannot be used again in this game.
+   */
+  removePlayer(playerId: string): Result<Player, GameError> {
+    if (this.finished) return err(gameError('GAME_FINISHED', 'This game is over'));
+    const player = this.players.get(playerId);
+    if (!player) return err(gameError('UNKNOWN_PLAYER', 'Player is not part of this game'));
+    this.players.delete(playerId);
+    this.teamOfPlayer.delete(playerId);
+    for (const round of this.rounds) {
+      for (const song of round.listSongs()) song.removeAnswersOf(playerId);
+    }
+    this.kickedNames.push(player.name);
     return ok(player);
   }
 

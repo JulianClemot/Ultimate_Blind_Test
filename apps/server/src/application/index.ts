@@ -17,6 +17,8 @@ export * from './use-cases/RenameTeam';
 export * from './use-cases/GetGameDesign';
 export * from './use-cases/GetGameStatus';
 export * from './use-cases/JoinGame';
+export * from './use-cases/KickPlayer';
+export * from './use-cases/KickPlayer';
 export * from './use-cases/JudgeAnswer';
 export * from './use-cases/LaunchGame';
 export * from './use-cases/NextSong';

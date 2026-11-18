@@ -3,6 +3,8 @@ import type { Answer, Game, Player, Song } from '../../../domain';
 /** Notifies connected clients of what happened in a game. */
 export interface GameEventPublisher {
   playerJoined(game: Game, player: Player): void;
+  /** The host removed a player: everyone learns it, and the player is shut out of the game. */
+  playerKicked(game: Game, player: Player): void;
   /** Teams were (re)generated, or a latecomer was added to one. */
   teamsUpdated(game: Game): void;
   songStarted(game: Game, song: Song): void;

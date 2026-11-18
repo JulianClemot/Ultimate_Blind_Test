@@ -19,7 +19,9 @@ export const usePlayerGame = (session: PlayerSession) => {
   const { gateway } = useRealtime();
   const [state, dispatch] = useReducer(playerGameReducer, null);
   const [rejoinError, setRejoinError] = useState<unknown>(null);
+  const [kicked, setKicked] = useState(false);
   const remember = useRecentGamesStore((s) => s.remember);
+  const forget = useRecentGamesStore((s) => s.forget);
 
   useOnConnect(() => {
     gateway
@@ -39,6 +41,12 @@ export const usePlayerGame = (session: PlayerSession) => {
       .catch(setRejoinError);
   });
 
+  // The host removed someone: for the others the scoreboard and teams updates say it all.
+  useSocketEvent('player:kicked', ({ playerId }) => {
+    if (playerId !== session.playerId) return;
+    setKicked(true);
+    forget(session.gameId);
+  });
   useSocketEvent('teams:updated', (teams) => dispatch({ type: 'teamsUpdated', teams }));
   useSocketEvent('team-scores:updated', (teamScoreboard) =>
     dispatch({ type: 'teamScoresUpdated', teamScoreboard }),
@@ -63,5 +71,5 @@ export const usePlayerGame = (session: PlayerSession) => {
     onSuccess: (answer) => dispatch({ type: 'answerSent', answer }),
   });
 
-  return { state, rejoinError, submitAnswer };
+  return { state, rejoinError, kicked, submitAnswer };
 };

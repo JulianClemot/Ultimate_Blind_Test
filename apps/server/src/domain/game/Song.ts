@@ -109,6 +109,13 @@ export class Song {
     return scoreSong(this.rules, this.answers);
   }
 
+  /** Forgets what a player sent, so a removed player no longer takes places from the others. */
+  removeAnswersOf(playerId: string): void {
+    for (let i = this.answers.length - 1; i >= 0; i--) {
+      if (this.answers[i]?.playerId === playerId) this.answers.splice(i, 1);
+    }
+  }
+
   hasAnswered(playerId: string): boolean {
     return this.answers.some((a) => a.playerId === playerId);
   }

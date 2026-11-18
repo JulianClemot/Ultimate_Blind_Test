@@ -2,6 +2,7 @@ export type GameErrorCode =
   | 'INVALID_GAME_CODE'
   | 'INVALID_PLAYER_NAME'
   | 'PLAYER_NAME_TAKEN'
+  | 'PLAYER_KICKED'
   | 'GAME_FULL'
   | 'GAME_FINISHED'
   | 'UNKNOWN_PLAYER'

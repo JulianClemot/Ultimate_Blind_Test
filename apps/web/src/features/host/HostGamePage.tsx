@@ -33,6 +33,7 @@ const HostGame = ({ session }: { session: HostSession }) => {
     generateTeams,
     renameTeam,
     movePlayers,
+    kickPlayer,
     finishGame,
     closeGame,
   } = useHostGame(session);
@@ -175,15 +176,18 @@ const HostGame = ({ session }: { session: HostSession }) => {
         </Card>
       )}
 
-      {!song && (
-        <Card className="flex flex-col gap-6 sm:flex-row sm:items-start">
-          <div className="flex-1">
-            <CardTitle>{t('host.players', { count: game.players.length })}</CardTitle>
-            <PlayerList players={game.players} />
-          </div>
-          <JoinQrCode code={game.code} />
-        </Card>
-      )}
+      <Card className="flex flex-col gap-6 sm:flex-row sm:items-start">
+        <div className="flex-1">
+          <CardTitle>{t('host.players', { count: game.players.length })}</CardTitle>
+          <PlayerList
+            players={game.players}
+            pending={kickPlayer.isPending}
+            onKick={(player) => kickPlayer.mutate({ playerId: player.id })}
+          />
+          <ErrorMessage error={kickPlayer.error} />
+        </div>
+        {!song && <JoinQrCode code={game.code} />}
+      </Card>
 
       <ScoreboardPanel
         open={scoresOpen}

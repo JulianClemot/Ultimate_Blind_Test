@@ -52,7 +52,7 @@ const SongProgress = ({ song, answers }: { song: SongDto; answers: readonly Answ
 
 const PlayerGame = ({ session }: { session: PlayerSession }) => {
   const { t } = useTranslation();
-  const { state, rejoinError, submitAnswer } = usePlayerGame(session);
+  const { state, rejoinError, kicked, submitAnswer } = usePlayerGame(session);
   const forget = useRecentGamesStore((s) => s.forget);
   const leave = () => forget(session.gameId);
   const song = state?.currentSong ?? null;
@@ -60,6 +60,17 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
   const hasAnswered = (state?.myAnswers.length ?? 0) > 0;
   const remaining = useCountdown(open ? song.startedAt + song.answerTimeSec * 1000 : null);
 
+  if (kicked) {
+    return (
+      <Card role="alert" className="flex flex-col items-start gap-3">
+        <CardTitle className="mb-0">{t('player.kickedTitle')}</CardTitle>
+        <p>{t('player.kicked')}</p>
+        <Link to="/" className={buttonVariants()}>
+          {t('common.backHome')}
+        </Link>
+      </Card>
+    );
+  }
   if (isGoneError(rejoinError)) {
     return (
       <Card className="flex flex-col items-start gap-3">

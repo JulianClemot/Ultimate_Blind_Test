@@ -3,6 +3,7 @@ import type { Answer, Game, Player, Song } from '../../src/domain';
 
 type RecordedEvent =
   | { type: 'playerJoined'; gameId: string; player: Player }
+  | { type: 'playerKicked'; gameId: string; player: Player }
   | { type: 'teamsUpdated'; gameId: string }
   | { type: 'songStarted'; gameId: string; song: Song }
   | { type: 'answerReceived'; gameId: string; answer: Answer }
@@ -21,6 +22,10 @@ export class RecordingEventPublisher implements GameEventPublisher {
 
   playerJoined(game: Game, player: Player): void {
     this.events.push({ type: 'playerJoined', gameId: game.id, player });
+  }
+
+  playerKicked(game: Game, player: Player): void {
+    this.events.push({ type: 'playerKicked', gameId: game.id, player });
   }
 
   teamsUpdated(game: Game): void {

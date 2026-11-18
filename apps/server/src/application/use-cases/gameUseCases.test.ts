@@ -25,6 +25,7 @@ import { GenerateTeams } from './GenerateTeams';
 import { GetGameStatus } from './GetGameStatus';
 import { JoinGame } from './JoinGame';
 import { JudgeAnswer } from './JudgeAnswer';
+import { KickPlayer } from './KickPlayer';
 import { LaunchGame } from './LaunchGame';
 import { MovePlayers } from './MovePlayers';
 import { NextSong } from './NextSong';
@@ -181,6 +182,77 @@ describe('party use cases', () => {
       expect(events.types()).toContain('gameFinished');
       const again = await new CloseGame(games, events).execute(host);
       expect(!again.ok && again.error.code).toBe('GAME_FINISHED');
+    });
+  });
+
+  describe('KickPlayer', () => {
+    const kick = (host: { gameId: string; hostToken: string }, playerId: string) =>
+      new KickPlayer(games, events, scheduler, new AutoRevealSong(games, clock, events)).execute({
+        ...host,
+        playerId,
+      });
+
+    it('removes a player from the lobby, tells everybody and refuses the same name afterwards', async () => {
+      const { game, host } = await launch();
+      const { player } = unwrap(await join('Alice'));
+      unwrap(await join('Bob'));
+      events.events.length = 0;
+
+      const kicked = unwrap(await kick(host, player.id));
+
+      expect(kicked.player.name.value).toBe('Alice');
+      expect(game.listPlayers().map((p) => p.name.value)).toEqual(['Bob']);
+      expect(events.types()).toEqual(['playerKicked', 'scoreboardUpdated']);
+      const again = await join('alice');
+      expect(!again.ok && again.error.code).toBe('PLAYER_KICKED');
+      const rejoin = await new RejoinGame(games).execute({ gameId: game.id, playerId: player.id });
+      expect(!rejoin.ok && rejoin.error.code).toBe('UNKNOWN_PLAYER');
+    });
+
+    it('works mid-song, and reveals the song if the kicked player was the one it waited for', async () => {
+      const { game, host } = await launch();
+      const alice = unwrap(await join('Alice')).player;
+      const bob = unwrap(await join('Bob')).player;
+      unwrap(await nextSong(host));
+      unwrap(await answer(game.id, alice.id, 'Title t1'));
+      events.events.length = 0;
+
+      unwrap(await kick(host, bob.id));
+
+      expect(events.types()).toEqual(['playerKicked', 'scoreboardUpdated', 'allAnswered']);
+      await scheduler.runAll();
+      expect(game.currentSong?.isRevealed).toBe(true);
+    });
+
+    it('also tells everybody about the teams, once they exist', async () => {
+      const round = roundInput('42', 'classic', 1);
+      const { host } = await launch([{ ...round, rules: { ...round.rules, teamMode: true } }]);
+      const alice = unwrap(await join('Alice')).player;
+      unwrap(await join('Bob'));
+      unwrap(await join('Chloé'));
+      unwrap(await new GenerateTeams(games, random, events).execute({ ...host, teamCount: 2 }));
+      events.events.length = 0;
+
+      unwrap(await kick(host, alice.id));
+
+      expect(events.types()).toEqual(['playerKicked', 'scoreboardUpdated', 'teamsUpdated']);
+    });
+
+    it('is reserved to the host and fails cleanly for a stranger or a finished game', async () => {
+      const { game, host } = await launch();
+      const alice = unwrap(await join('Alice')).player;
+      events.events.length = 0;
+
+      const intruder = await kick({ ...host, hostToken: 'guess' }, alice.id);
+      expect(!intruder.ok && intruder.error.code).toBe('NOT_HOST');
+      const ghost = await kick(host, 'ghost');
+      expect(!ghost.ok && ghost.error.code).toBe('UNKNOWN_PLAYER');
+      expect(events.events).toHaveLength(0);
+      expect(game.listPlayers()).toHaveLength(1);
+
+      unwrap(await new CloseGame(games, events).execute(host));
+      const late = await kick(host, alice.id);
+      expect(!late.ok && late.error.code).toBe('GAME_FINISHED');
     });
   });
 

@@ -1,4 +1,9 @@
-import type { JudgeAnswerPayload, MovePlayersPayload, RenameTeamPayload } from '@ubt/shared';
+import type {
+  JudgeAnswerPayload,
+  KickPlayerPayload,
+  MovePlayersPayload,
+  RenameTeamPayload,
+} from '@ubt/shared';
 import { useMutation } from '@tanstack/react-query';
 import { useReducer, useState } from 'react';
 
@@ -25,6 +30,7 @@ export const useHostGame = (session: HostSession) => {
   });
 
   useSocketEvent('player:joined', (player) => dispatch({ type: 'playerJoined', player }));
+  useSocketEvent('player:kicked', ({ playerId }) => dispatch({ type: 'playerKicked', playerId }));
   useSocketEvent('teams:updated', (teams) => dispatch({ type: 'teamsUpdated', teams }));
   useSocketEvent('team-scores:updated', (teamScoreboard) =>
     dispatch({ type: 'teamScoresUpdated', teamScoreboard }),
@@ -70,6 +76,10 @@ export const useHostGame = (session: HostSession) => {
     mutationFn: (payload: MovePlayersPayload) => gateway.movePlayers(payload),
     onSuccess: (teams) => dispatch({ type: 'teamsUpdated', teams }),
   });
+  const kickPlayer = useMutation({
+    mutationFn: (payload: KickPlayerPayload) => gateway.kickPlayer(payload),
+    onSuccess: (player) => dispatch({ type: 'playerKicked', playerId: player.id }),
+  });
   const finishGame = useMutation({
     mutationFn: () => gateway.finishGame(),
     onSuccess: (scoreboard) => dispatch({ type: 'gameFinished', scoreboard }),
@@ -89,6 +99,7 @@ export const useHostGame = (session: HostSession) => {
     generateTeams,
     renameTeam,
     movePlayers,
+    kickPlayer,
     finishGame,
     closeGame,
   };

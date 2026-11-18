@@ -99,6 +99,12 @@ export interface PlayerSession {
   readonly player: Player;
 }
 
+export interface KickPlayerCommand extends HostCommand {
+  readonly playerId: string;
+}
+/** Resolves with the game and the player who was removed from it. */
+export type KickPlayerUseCase = UseCase<KickPlayerCommand, PlayerSession>;
+
 export interface JoinGameCommand {
   readonly code: string;
   readonly playerName: string;

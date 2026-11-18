@@ -122,6 +122,14 @@ These rules are enforced by `pnpm depcruise` (`.dependency-cruiser.cjs`) in CI.
   The list asks `GET /api/games/:gameId/status?playerId=` (`GetGameStatus`: only a player of the game
   gets an answer, status only) to flag a finished party ("See results") and to drop a vanished one
   (`GAME_NOT_FOUND`). A failed check changes nothing.
+- **Kicking a player**: the host emits `player:kick { playerId }` at any time before the game ends
+  (lobby, song running, between songs). `Game.removePlayer` drops the player, their team slot and
+  their answers (they must not take places from the others) and remembers their name:
+  `addPlayer` then refuses it with `PLAYER_KICKED`, so a kicked player cannot just rejoin. The
+  use case (`KickPlayer`) pushes `player:kicked { playerId }` to the whole game room (the kicked
+  sockets then leave the rooms), then `scoreboard:updated` (+ `teams:updated` with teams), and
+  triggers the auto-reveal if the removed player was the last one a song was waiting for. A
+  kicked player's `player:rejoin` fails with `UNKNOWN_PLAYER`. After the end: `GAME_FINISHED`.
 - Clients re-identify on every `connect` (`useOnConnect`), so a phone going to sleep or a page
   refresh resumes the game (session kept in `sessionStorage`).
 

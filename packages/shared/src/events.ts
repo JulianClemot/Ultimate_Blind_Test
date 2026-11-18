@@ -19,6 +19,7 @@ import type {
   GenerateTeamsPayload,
   JoinGamePayload,
   JudgeAnswerPayload,
+  KickPlayerPayload,
   MovePlayersPayload,
   RejoinGamePayload,
   RenameTeamPayload,
@@ -41,6 +42,8 @@ export interface ClientToServerEvents {
   'teams:rename': (payload: RenameTeamPayload, ack: Ack<readonly TeamDto[]>) => void;
   /** Lobby only: puts players in another team, all or none (a team is never left empty). */
   'teams:move-players': (payload: MovePlayersPayload, ack: Ack<readonly TeamDto[]>) => void;
+  /** Removes a player, at any time before the end; their name cannot be reused in this game. */
+  'player:kick': (payload: KickPlayerPayload, ack: Ack<PlayerDto>) => void;
   'game:finish': (ack: Ack<readonly ScoreDto[]>) => void;
   /** Ends the game right now for everyone, even before the current song is revealed. */
   'game:close': (ack: Ack<readonly ScoreDto[]>) => void;
@@ -53,6 +56,8 @@ export interface ClientToServerEvents {
 export interface ServerToClientEvents {
   /** To hosts. */
   'player:joined': (player: PlayerDto) => void;
+  /** To everyone in the game, the kicked player included (who is then shut out of the game). */
+  'player:kicked': (payload: { playerId: string }) => void;
   /** To players only (no audio, so they cannot look the song up). */
   'song:started': (song: SongDto) => void;
   /** To hosts only: the song with the preview to play. */
