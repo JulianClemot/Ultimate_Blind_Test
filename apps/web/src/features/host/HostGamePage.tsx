@@ -23,8 +23,17 @@ import { useHostGame } from './useHostGame';
 
 const HostGame = ({ session }: { session: HostSession }) => {
   const { t } = useTranslation();
-  const { game, attachError, nextSong, revealSong, judgeAnswer, generateTeams, finishGame } =
-    useHostGame(session);
+  const {
+    game,
+    attachError,
+    nextSong,
+    revealSong,
+    judgeAnswer,
+    generateTeams,
+    renameTeam,
+    movePlayers,
+    finishGame,
+  } = useHostGame(session);
   const [scoresOpen, setScoresOpen] = useState(false);
   const music = useSongMusic(game?.status === 'finished' ? null : (game?.currentSong ?? null));
 
@@ -92,9 +101,13 @@ const HostGame = ({ session }: { session: HostSession }) => {
               <TeamsPanel
                 players={game.players}
                 teams={game.teams}
-                pending={generateTeams.isPending}
-                error={generateTeams.error}
+                pending={generateTeams.isPending || renameTeam.isPending || movePlayers.isPending}
+                error={generateTeams.error ?? renameTeam.error ?? movePlayers.error}
                 onGenerate={(teamCount) => generateTeams.mutate(teamCount)}
+                onRename={(teamId, name) => renameTeam.mutate({ teamId, name })}
+                onMovePlayers={(playerIds, teamId) =>
+                  movePlayers.mutate({ playerIds: [...playerIds], teamId })
+                }
               />
             )
           }

@@ -10,6 +10,8 @@ export * from './use-cases/CreateGameDesign';
 export * from './use-cases/DeleteGameDesign';
 export * from './use-cases/FinishGame';
 export * from './use-cases/GenerateTeams';
+export * from './use-cases/MovePlayers';
+export * from './use-cases/RenameTeam';
 export * from './use-cases/GetGameDesign';
 export * from './use-cases/JoinGame';
 export * from './use-cases/JudgeAnswer';

@@ -106,6 +106,19 @@ export const generateTeamsPayloadSchema = z.object({
 });
 export type GenerateTeamsPayload = z.infer<typeof generateTeamsPayloadSchema>;
 
+export const renameTeamPayloadSchema = z.object({
+  teamId: z.string().min(1),
+  /** Length and uniqueness are checked by the domain. */
+  name: z.string(),
+});
+export type RenameTeamPayload = z.infer<typeof renameTeamPayloadSchema>;
+
+export const movePlayersPayloadSchema = z.object({
+  playerIds: z.array(z.string().min(1)).min(1).max(50),
+  teamId: z.string().min(1),
+});
+export type MovePlayersPayload = z.infer<typeof movePlayersPayloadSchema>;
+
 export const submitAnswerPayloadSchema = z.object({
   text: z.string(),
   /** Client wall-clock time (epoch ms) at submission, kept for diagnostics only. */

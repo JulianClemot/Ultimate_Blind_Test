@@ -22,7 +22,11 @@ export type GameErrorCode =
   | 'INVALID_TEAM_COUNT'
   | 'NOT_ENOUGH_PLAYERS'
   | 'TEAMS_LOCKED'
-  | 'TEAMS_REQUIRED';
+  | 'TEAMS_REQUIRED'
+  | 'UNKNOWN_TEAM'
+  | 'INVALID_TEAM_NAME'
+  | 'TEAM_NAME_TAKEN'
+  | 'TEAM_WOULD_BE_EMPTY';
 
 export interface GameError {
   readonly code: GameErrorCode;

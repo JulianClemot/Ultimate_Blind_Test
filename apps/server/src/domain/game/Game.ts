@@ -14,7 +14,10 @@ import type { Song, SubmitAnswerCommand } from './Song';
 import {
   balancedSplit,
   generateTeamNames,
+  MAX_TEAM_NAME_LENGTH,
   MAX_TEAMS,
+  normalizeTeamName,
+  sameTeamName,
   type IntSource,
   type Team,
   type TeamScore,
@@ -197,6 +200,64 @@ export class Game {
       if (team) group.forEach((playerId) => this.teamOfPlayer.set(playerId, team.id));
     });
     return ok(this.teams);
+  }
+
+  /** Host override of a generated name. Lobby only; names stay distinct within the game. */
+  renameTeam(command: { teamId: string; name: string }): Result<readonly Team[], GameError> {
+    const locked = this.checkTeamsEditable();
+    if (!locked.ok) return locked;
+    const team = this.teams.find((t) => t.id === command.teamId);
+    if (!team) return err(gameError('UNKNOWN_TEAM', 'No such team'));
+    const name = normalizeTeamName(command.name);
+    if (name === undefined) {
+      return err(
+        gameError(
+          'INVALID_TEAM_NAME',
+          `Team name must contain 1 to ${MAX_TEAM_NAME_LENGTH} characters`,
+        ),
+      );
+    }
+    if (this.teams.some((t) => t.id !== team.id && sameTeamName(t.name, name))) {
+      return err(gameError('TEAM_NAME_TAKEN', `"${name}" is already used by another team`));
+    }
+    this.teams = this.teams.map((t) => (t.id === team.id ? { ...t, name } : t));
+    return ok(this.teams);
+  }
+
+  /**
+   * Host override of the draw: puts players in another team, all or none. Lobby only; no team is
+   * left empty, whatever the combination of players moved.
+   */
+  movePlayers(command: {
+    playerIds: readonly string[];
+    teamId: string;
+  }): Result<readonly Team[], GameError> {
+    const locked = this.checkTeamsEditable();
+    if (!locked.ok) return locked;
+    const target = this.teams.find((t) => t.id === command.teamId);
+    if (!target) return err(gameError('UNKNOWN_TEAM', 'No such team'));
+    const moving = new Set(command.playerIds);
+    if ([...moving].some((id) => !this.players.has(id))) {
+      return err(gameError('UNKNOWN_PLAYER', 'Player is not part of this game'));
+    }
+    const leaving = [...moving].filter((id) => this.teamOfPlayer.get(id) !== target.id);
+    for (const team of this.teams) {
+      if (team.id === target.id) continue;
+      const members = this.membersOf(team);
+      const leavers = members.filter((player) => leaving.includes(player.id)).length;
+      if (leavers > 0 && leavers >= members.length) {
+        return err(gameError('TEAM_WOULD_BE_EMPTY', 'Every team needs at least one player'));
+      }
+    }
+    for (const id of leaving) this.teamOfPlayer.set(id, target.id);
+    return ok(this.teams);
+  }
+
+  private checkTeamsEditable(): Result<void, GameError> {
+    if (this.status !== 'lobby') {
+      return err(gameError('TEAMS_LOCKED', 'Teams can only be changed before the first song'));
+    }
+    return ok(undefined);
   }
 
   /** A game with a team-mode round cannot start before its teams are generated. */

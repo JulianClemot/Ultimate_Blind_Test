@@ -1,4 +1,4 @@
-import type { JudgeAnswerPayload } from '@ubt/shared';
+import type { JudgeAnswerPayload, MovePlayersPayload, RenameTeamPayload } from '@ubt/shared';
 import { useMutation } from '@tanstack/react-query';
 import { useReducer, useState } from 'react';
 
@@ -62,10 +62,28 @@ export const useHostGame = (session: HostSession) => {
     mutationFn: (teamCount: number) => gateway.generateTeams({ teamCount }),
     onSuccess: (teams) => dispatch({ type: 'teamsUpdated', teams }),
   });
+  const renameTeam = useMutation({
+    mutationFn: (payload: RenameTeamPayload) => gateway.renameTeam(payload),
+    onSuccess: (teams) => dispatch({ type: 'teamsUpdated', teams }),
+  });
+  const movePlayers = useMutation({
+    mutationFn: (payload: MovePlayersPayload) => gateway.movePlayers(payload),
+    onSuccess: (teams) => dispatch({ type: 'teamsUpdated', teams }),
+  });
   const finishGame = useMutation({
     mutationFn: () => gateway.finishGame(),
     onSuccess: (scoreboard) => dispatch({ type: 'gameFinished', scoreboard }),
   });
 
-  return { game, attachError, nextSong, revealSong, judgeAnswer, generateTeams, finishGame };
+  return {
+    game,
+    attachError,
+    nextSong,
+    revealSong,
+    judgeAnswer,
+    generateTeams,
+    renameTeam,
+    movePlayers,
+    finishGame,
+  };
 };

@@ -102,7 +102,10 @@ These rules are enforced by `pnpm depcruise` (`.dependency-cruiser.cjs`) in CI.
   host emits `teams:generate { teamCount }` (2–4, one player per team at least): `Game.generateTeams`
   shuffles the players with the `RandomGenerator` port, deals them round-robin (sizes differ by at
   most one) and draws distinct names ("The Funky Flamingos"). It can be redone until the first song
-  (`TEAMS_LOCKED` after). A game with a team-mode round refuses `song:next` with `TEAMS_REQUIRED`
+  (`TEAMS_LOCKED` after). Until then the host can also override the draw: `teams:rename
+{ teamId, name }` (1–30 characters, distinct from the other teams, case-insensitively) and
+  `teams:move-players { playerIds, teamId }` (`Game.renameTeam` / `Game.movePlayers`; a team is never
+  left empty: `TEAM_WOULD_BE_EMPTY`). Both ack with the new `TeamDto[]` and push `teams:updated`. A game with a team-mode round refuses `song:next` with `TEAMS_REQUIRED`
   until teams exist (checked before the Deezer call). Latecomers join the smallest team. Pushes:
   `teams:updated` (generation or latecomer) and `team-scores:updated` (with `scoreboard:updated`);
   `RevealDto.teamScoreboard`, `PlayerSessionDto.myTeamId/teams` and `GameRecapDto.teamStandings`

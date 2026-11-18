@@ -102,3 +102,14 @@ export const balancedSplit = <T>(
 };
 
 export const MAX_TEAMS = 4;
+export const MAX_TEAM_NAME_LENGTH = 30;
+
+/** Normalizes a host-chosen team name; undefined when empty or too long. */
+export const normalizeTeamName = (raw: string): string | undefined => {
+  const value = raw.trim().replace(/\s+/g, ' ');
+  return value.length === 0 || value.length > MAX_TEAM_NAME_LENGTH ? undefined : value;
+};
+
+/** Team names are unique per game, case-insensitively. */
+export const sameTeamName = (a: string, b: string): boolean =>
+  a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0;

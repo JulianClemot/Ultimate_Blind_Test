@@ -1,9 +1,10 @@
 import type { GameSnapshotDto } from '@ubt/shared';
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { GatewayError } from '@/shared/realtime/gameGateway';
 import { useSessionStore } from '@/shared/session/sessionStore';
 import { gameRecap, hostSong, snapshot } from '@/test/fixtures';
 import { fakeGateway, renderWithRealtime } from '@/test/renderWithRealtime';
@@ -167,16 +168,86 @@ describe('<HostGamePage />', () => {
 
       expect(generateTeams).toHaveBeenCalledWith({ teamCount: 2 });
       const teams = await screen.findByRole('region', { name: 'Teams' });
-      expect(teams).toHaveTextContent('The Funky Flamingos (1)Alice');
-      expect(teams).toHaveTextContent('The Neon Llamas (1)Bob');
+      expect(within(teams).getByLabelText('Name of team 1')).toHaveValue('The Funky Flamingos');
+      expect(within(teams).getByLabelText('Name of team 2')).toHaveValue('The Neon Llamas');
+      expect(teams).toHaveTextContent('Alice');
+      expect(teams).toHaveTextContent('Bob');
       expect(screen.getByRole('button', { name: 'Play the first song' })).toBeEnabled();
       expect(screen.getByRole('button', { name: 'Shuffle the teams again' })).toBeVisible();
+    });
+
+    it('renames a team and shows the teams the server answers with', async () => {
+      const renamed = [{ ...generatedTeams[0]!, name: 'Les Rois' }, generatedTeams[1]!];
+      const renameTeam = vi.fn().mockResolvedValue(renamed);
+      renderWithRealtime(
+        <MemoryRouter initialEntries={['/host/g1']}>
+          <Routes>
+            <Route path="/host/:gameId" element={<HostGamePage />} />
+          </Routes>
+        </MemoryRouter>,
+        fakeGateway({
+          attachHost: vi.fn().mockResolvedValue(teamGame({ teams: generatedTeams })),
+          renameTeam,
+        }),
+      );
+
+      const input = await screen.findByLabelText('Name of team 1');
+      await userEvent.clear(input);
+      await userEvent.type(input, 'Les Rois{Enter}');
+
+      expect(renameTeam).toHaveBeenCalledWith({ teamId: 'team-1', name: 'Les Rois' });
+      await waitFor(() => expect(screen.getByLabelText('Name of team 1')).toHaveValue('Les Rois'));
+    });
+
+    it('moves a dragged player and shows the error when the server refuses', async () => {
+      const carol = { id: 'p3', name: 'Carol' };
+      const teams = [
+        { id: 'team-1', name: 'The Funky Flamingos', players: [alice, carol] },
+        { id: 'team-2', name: 'The Neon Llamas', players: [bob] },
+      ];
+      const movePlayers = vi
+        .fn()
+        .mockResolvedValueOnce([
+          { ...teams[0]!, players: [carol] },
+          { ...teams[1]!, players: [bob, alice] },
+        ])
+        .mockRejectedValueOnce(new GatewayError({ code: 'TEAMS_LOCKED', message: 'locked' }));
+      renderWithRealtime(
+        <MemoryRouter initialEntries={['/host/g1']}>
+          <Routes>
+            <Route path="/host/:gameId" element={<HostGamePage />} />
+          </Routes>
+        </MemoryRouter>,
+        fakeGateway({
+          attachHost: vi.fn().mockResolvedValue(teamGame({ players: [alice, bob, carol], teams })),
+          movePlayers,
+        }),
+      );
+
+      const [firstCard, secondCard] = (await screen.findAllByRole('listitem')).filter((li) =>
+        li.querySelector('input'),
+      );
+      fireEvent.dragStart(within(firstCard!).getByRole('button', { name: 'Alice' }));
+      fireEvent.drop(secondCard!);
+      await waitFor(() =>
+        expect(movePlayers).toHaveBeenCalledWith({ playerIds: ['p1'], teamId: 'team-2' }),
+      );
+      // Alice now sits in the second team.
+      await waitFor(() =>
+        expect(within(secondCard!).getByRole('button', { name: 'Alice' })).toBeVisible(),
+      );
+
+      fireEvent.dragStart(within(secondCard!).getByRole('button', { name: 'Bob' }));
+      fireEvent.drop(firstCard!);
+      expect(
+        await screen.findByText('Teams can only be changed before the first song'),
+      ).toBeVisible();
     });
 
     it('lets a host coming back find the teams already drawn', async () => {
       renderPage(teamGame({ teams: generatedTeams }));
       expect(await screen.findByRole('button', { name: 'Play the first song' })).toBeEnabled();
-      expect(screen.getByRole('region', { name: 'Teams' })).toHaveTextContent('The Neon Llamas');
+      expect(screen.getByLabelText('Name of team 2')).toHaveValue('The Neon Llamas');
     });
 
     it('shows the team scores above the players in the scores panel', async () => {

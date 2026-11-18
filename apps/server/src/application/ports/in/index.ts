@@ -82,6 +82,18 @@ export interface GenerateTeamsCommand extends HostCommand {
 }
 export type GenerateTeamsUseCase = UseCase<GenerateTeamsCommand, Game>;
 
+export interface RenameTeamCommand extends HostCommand {
+  readonly teamId: string;
+  readonly name: string;
+}
+export type RenameTeamUseCase = UseCase<RenameTeamCommand, Game>;
+
+export interface MovePlayersCommand extends HostCommand {
+  readonly playerIds: readonly string[];
+  readonly teamId: string;
+}
+export type MovePlayersUseCase = UseCase<MovePlayersCommand, Game>;
+
 export interface PlayerSession {
   readonly game: Game;
   readonly player: Player;

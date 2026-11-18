@@ -806,6 +806,72 @@ describe('blind test (HTTP + Socket.IO)', () => {
       });
     });
 
+    it('lets the host rename teams and move players before the party, and tells everybody', async () => {
+      const { party, host } = await launchParty([teamRound('42')]);
+      const alice = await join(party.code, 'Alice');
+      await join(party.code, 'Bob');
+      await join(party.code, 'Chloé');
+      const generated = await host.emitWithAck('teams:generate', { teamCount: 2 });
+      if (!generated.ok) throw new Error(generated.error.message);
+      const [first, second] = generated.data;
+      if (!first || !second) throw new Error('expected two teams');
+
+      const renamedForAlice = nextEvent(alice.socket, 'teams:updated');
+      const renamed = await host.emitWithAck('teams:rename', {
+        teamId: first.id,
+        name: '  Les   Rois ',
+      });
+      expect(renamed.ok && renamed.data.find((team) => team.id === first.id)?.name).toBe(
+        'Les Rois',
+      );
+      expect((await renamedForAlice).find((team) => team.id === first.id)?.name).toBe('Les Rois');
+
+      // A team name is unique, whatever its case.
+      expect(
+        await host.emitWithAck('teams:rename', { teamId: second.id, name: 'LES ROIS' }),
+      ).toMatchObject({ ok: false, error: { code: 'TEAM_NAME_TAKEN' } });
+
+      // The bigger team gives a player to the smaller one.
+      const [big, small] = [first, second].sort((a, b) => b.players.length - a.players.length);
+      const mover = big?.players[0];
+      if (!big || !small || !mover) throw new Error('expected players');
+      const movedForAlice = nextEvent(alice.socket, 'teams:updated');
+      const moved = await host.emitWithAck('teams:move-players', {
+        playerIds: [mover.id],
+        teamId: small.id,
+      });
+      expect(moved.ok && moved.data.find((team) => team.id === small.id)?.players).toContainEqual(
+        mover,
+      );
+      expect(await movedForAlice).toEqual(moved.ok && moved.data);
+      // 3 players: the team that gave one away now has a single member, who must stay.
+      const lastOne = moved.ok ? moved.data.find((team) => team.id === big.id)?.players : undefined;
+      expect(lastOne).toHaveLength(1);
+      expect(
+        await host.emitWithAck('teams:move-players', {
+          playerIds: lastOne?.map((p) => p.id) ?? [],
+          teamId: small.id,
+        }),
+      ).toMatchObject({ ok: false, error: { code: 'TEAM_WOULD_BE_EMPTY' } });
+
+      // Players cannot touch the teams, and an empty selection is refused.
+      expect(
+        await alice.socket.emitWithAck('teams:rename', { teamId: first.id, name: 'Mine' }),
+      ).toMatchObject({ ok: false });
+      expect(
+        await host.emitWithAck('teams:move-players', { playerIds: [], teamId: small.id }),
+      ).toMatchObject({ ok: false });
+
+      // Once the song started, the teams are frozen.
+      await host.emitWithAck('song:next');
+      expect(
+        await host.emitWithAck('teams:rename', { teamId: first.id, name: 'Too late' }),
+      ).toMatchObject({ ok: false, error: { code: 'TEAMS_LOCKED' } });
+      expect(
+        await host.emitWithAck('teams:move-players', { playerIds: [mover.id], teamId: big.id }),
+      ).toMatchObject({ ok: false, error: { code: 'TEAMS_LOCKED' } });
+    });
+
     it('puts a latecomer in the smallest team and tells the host', async () => {
       const { party, host } = await launchParty([teamRound('42')]);
       await join(party.code, 'Alice');

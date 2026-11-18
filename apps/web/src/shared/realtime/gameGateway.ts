@@ -8,9 +8,11 @@ import type {
   GenerateTeamsPayload,
   JoinGamePayload,
   JudgeAnswerPayload,
+  MovePlayersPayload,
   NextSongResponseDto,
   PlayerSessionDto,
   RejoinGamePayload,
+  RenameTeamPayload,
   RevealDto,
   ScoreDto,
   SubmitAnswerPayload,
@@ -39,6 +41,8 @@ export interface GameGateway {
   revealSong(): Promise<RevealDto>;
   judgeAnswer(payload: JudgeAnswerPayload): Promise<AnswerDto>;
   generateTeams(payload: GenerateTeamsPayload): Promise<readonly TeamDto[]>;
+  renameTeam(payload: RenameTeamPayload): Promise<readonly TeamDto[]>;
+  movePlayers(payload: MovePlayersPayload): Promise<readonly TeamDto[]>;
   finishGame(): Promise<readonly ScoreDto[]>;
   joinGame(payload: JoinGamePayload): Promise<PlayerSessionDto>;
   rejoinGame(payload: RejoinGamePayload): Promise<PlayerSessionDto>;
@@ -68,6 +72,8 @@ export const createSocketGameGateway = (socket: GameSocket): GameGateway => {
     revealSong: () => request<RevealDto>('song:reveal'),
     judgeAnswer: (payload) => request<AnswerDto>('answer:judge', payload),
     generateTeams: (payload) => request<readonly TeamDto[]>('teams:generate', payload),
+    renameTeam: (payload) => request<readonly TeamDto[]>('teams:rename', payload),
+    movePlayers: (payload) => request<readonly TeamDto[]>('teams:move-players', payload),
     finishGame: () => request<readonly ScoreDto[]>('game:finish'),
     joinGame: (payload) => request<PlayerSessionDto>('player:join', payload),
     rejoinGame: (payload) => request<PlayerSessionDto>('player:rejoin', payload),

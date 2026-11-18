@@ -13,6 +13,8 @@ export const fakeGateway = (overrides: Partial<GameGateway> = {}): GameGateway =
   revealSong: vi.fn(),
   judgeAnswer: vi.fn(),
   generateTeams: vi.fn(),
+  renameTeam: vi.fn(),
+  movePlayers: vi.fn(),
   finishGame: vi.fn(),
   joinGame: vi.fn(),
   rejoinGame: vi.fn(),

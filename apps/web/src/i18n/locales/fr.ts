@@ -177,6 +177,10 @@ export const fr: Messages = {
     shuffleTeams: 'Mélanger à nouveau les équipes',
     needPlayers: "Attendez qu'au moins 2 joueurs aient rejoint.",
     lateJoiners: "Les joueurs qui arrivent plus tard sont ajoutés à l'équipe la plus petite.",
+    adjustTeamsHint:
+      'Renommez les équipes, cliquez sur des joueurs pour en sélectionner plusieurs, puis glissez-les sur une équipe (ou utilisez le bouton d’une équipe) jusqu’au premier morceau.',
+    teamNameLabel: "Nom de l'équipe {{number}}",
+    moveSelectedHere: 'Déplacer les {{count}} sélectionnés ici',
   },
   recap: {
     finalResults: '{{name}} — résultats finaux',
@@ -304,7 +308,11 @@ export const fr: Messages = {
     UNKNOWN_PLAYER: 'Ce joueur ne fait pas partie de cette partie',
     UNKNOWN_ANSWER: 'Aucune réponse correspondante pour le morceau en cours',
     EMPTY_DESIGN: 'Ajoutez au moins une manche avant de lancer la partie',
-    TEAMS_LOCKED: "Les équipes ne peuvent être générées qu'avant le premier morceau",
+    TEAMS_LOCKED: "Les équipes ne peuvent être modifiées qu'avant le premier morceau",
+    UNKNOWN_TEAM: 'Équipe introuvable',
+    INVALID_TEAM_NAME: "Le nom d'une équipe doit contenir de 1 à 30 caractères",
+    TEAM_NAME_TAKEN: 'Une autre équipe porte déjà ce nom',
+    TEAM_WOULD_BE_EMPTY: 'Chaque équipe doit garder au moins un joueur',
     UNKNOWN_SUGGESTION: 'Aucune suggestion correspondante pour la manche en cours',
     NO_SOURCE_TRACKS: 'Aucun titre de la playlist n’a pu être relié à un film, une série ou un jeu',
     TEAMS_REQUIRED: 'Générez les équipes avant de jouer une manche par équipes',

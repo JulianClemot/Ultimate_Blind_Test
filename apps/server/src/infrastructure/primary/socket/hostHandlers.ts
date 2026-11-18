@@ -2,6 +2,8 @@ import {
   attachHostPayloadSchema,
   generateTeamsPayloadSchema,
   judgeAnswerPayloadSchema,
+  movePlayersPayloadSchema,
+  renameTeamPayloadSchema,
   type NextSongResponseDto,
 } from '@ubt/shared';
 import type { FastifyBaseLogger } from 'fastify';
@@ -11,8 +13,10 @@ import type {
   FinishGameUseCase,
   GenerateTeamsUseCase,
   JudgeAnswerUseCase,
+  MovePlayersUseCase,
   NextSongResult,
   NextSongUseCase,
+  RenameTeamUseCase,
   RevealSongUseCase,
 } from '../../../application';
 import {
@@ -30,6 +34,8 @@ import { fromResult, notIdentified, parsePayload, respond } from './respond';
 export interface HostUseCases {
   readonly attachHost: AttachHostUseCase;
   readonly generateTeams: GenerateTeamsUseCase;
+  readonly renameTeam: RenameTeamUseCase;
+  readonly movePlayers: MovePlayersUseCase;
   readonly nextSong: NextSongUseCase;
   readonly revealSong: RevealSongUseCase;
   readonly judgeAnswer: JudgeAnswerUseCase;
@@ -75,6 +81,30 @@ export const registerHostHandlers = (
       if (!input.ok) return input.response;
 
       const result = await useCases.generateTeams.execute({ ...session, ...input.value });
+      return fromResult(result, toTeamDtos);
+    }),
+  );
+
+  socket.on('teams:rename', (payload, ack) =>
+    respond(ack, logger, async () => {
+      const session = hostSession();
+      if (!session) return notIdentified();
+      const input = parsePayload(renameTeamPayloadSchema, payload);
+      if (!input.ok) return input.response;
+
+      const result = await useCases.renameTeam.execute({ ...session, ...input.value });
+      return fromResult(result, toTeamDtos);
+    }),
+  );
+
+  socket.on('teams:move-players', (payload, ack) =>
+    respond(ack, logger, async () => {
+      const session = hostSession();
+      if (!session) return notIdentified();
+      const input = parsePayload(movePlayersPayloadSchema, payload);
+      if (!input.ok) return input.response;
+
+      const result = await useCases.movePlayers.execute({ ...session, ...input.value });
       return fromResult(result, toTeamDtos);
     }),
   );

@@ -324,6 +324,110 @@ describe('Game', () => {
       expect(!result.ok && result.error.code).toBe('TEAMS_LOCKED');
     });
 
+    describe('host adjustments', () => {
+      beforeEach(() => {
+        joinPlayers(5);
+        unwrap(game.generateTeams({ teamCount: 2, random }));
+      });
+
+      it('renames a team, trimming and collapsing spaces', () => {
+        unwrap(game.renameTeam({ teamId: 'team-1', name: '  Les   Rois  ' }));
+        expect(game.listTeams().find((t) => t.id === 'team-1')?.name).toBe('Les Rois');
+        expect(game.teamOf('p1')?.id).toBeDefined();
+      });
+
+      it.each(['', '   ', 'x'.repeat(31)])('refuses the team name %j', (name) => {
+        const result = game.renameTeam({ teamId: 'team-1', name });
+        expect(!result.ok && result.error.code).toBe('INVALID_TEAM_NAME');
+      });
+
+      it('refuses a name another team already has, ignoring case', () => {
+        const other = game.listTeams().find((t) => t.id === 'team-2')!;
+        const result = game.renameTeam({ teamId: 'team-1', name: other.name.toUpperCase() });
+        expect(!result.ok && result.error.code).toBe('TEAM_NAME_TAKEN');
+      });
+
+      it('lets a team keep its own name', () => {
+        const own = game.listTeams().find((t) => t.id === 'team-1')!;
+        unwrap(game.renameTeam({ teamId: 'team-1', name: own.name }));
+      });
+
+      it('refuses to rename an unknown team', () => {
+        const result = game.renameTeam({ teamId: 'team-9', name: 'Ghosts' });
+        expect(!result.ok && result.error.code).toBe('UNKNOWN_TEAM');
+      });
+
+      const idsOf = (teamId: string) =>
+        game.membersOf(game.listTeams().find((t) => t.id === teamId)!).map((p) => p.id);
+
+      it('moves players to another team', () => {
+        const from = game.teamOf('p1')!;
+        const to = game.listTeams().find((t) => t.id !== from.id)!;
+        unwrap(game.movePlayers({ playerIds: ['p1'], teamId: to.id }));
+        expect(game.teamOf('p1')).toEqual(to);
+        expect(idsOf(from.id)).not.toContain('p1');
+      });
+
+      it('moves several players at once', () => {
+        const ids = idsOf('team-1').slice(0, 2);
+        unwrap(game.movePlayers({ playerIds: ids, teamId: 'team-2' }));
+        expect(idsOf('team-2')).toEqual(expect.arrayContaining(ids));
+        expect(idsOf('team-1')).toHaveLength(1);
+        expect(idsOf('team-1')).toEqual(expect.not.arrayContaining(ids));
+      });
+
+      it('accepts a selection from several teams, some already at the destination', () => {
+        const mixed = [idsOf('team-1')[0]!, idsOf('team-2')[0]!];
+        unwrap(game.movePlayers({ playerIds: mixed, teamId: 'team-2' }));
+        expect(idsOf('team-2')).toEqual(expect.arrayContaining(mixed));
+        expect(idsOf('team-1').length).toBeGreaterThan(0);
+      });
+
+      it('does nothing when the players are already in that team', () => {
+        const before = idsOf('team-1');
+        unwrap(game.movePlayers({ playerIds: before, teamId: 'team-1' }));
+        expect(idsOf('team-1')).toEqual(before);
+      });
+
+      it('never leaves a team without players', () => {
+        const result = game.movePlayers({ playerIds: idsOf('team-2'), teamId: 'team-1' });
+        expect(!result.ok && result.error.code).toBe('TEAM_WOULD_BE_EMPTY');
+        expect(idsOf('team-2').length).toBeGreaterThan(0);
+      });
+
+      it('moves all or none: a refused move changes nobody', () => {
+        const before = { one: idsOf('team-1'), two: idsOf('team-2') };
+        // The second player is unknown: the first must not move either.
+        const unknown = game.movePlayers({
+          playerIds: [before.two[0]!, 'nobody'],
+          teamId: 'team-1',
+        });
+        expect(!unknown.ok && unknown.error.code).toBe('UNKNOWN_PLAYER');
+        const emptying = game.movePlayers({ playerIds: before.two, teamId: 'team-1' });
+        expect(!emptying.ok && emptying.error.code).toBe('TEAM_WOULD_BE_EMPTY');
+        expect({ one: idsOf('team-1'), two: idsOf('team-2') }).toEqual(before);
+      });
+
+      it('refuses an unknown team', () => {
+        const noTeam = game.movePlayers({ playerIds: ['p1'], teamId: 'team-9' });
+        expect(!noTeam.ok && noTeam.error.code).toBe('UNKNOWN_TEAM');
+      });
+
+      it('is locked once the first song started', () => {
+        unwrap(startSong());
+        const rename = game.renameTeam({ teamId: 'team-1', name: 'Too late' });
+        expect(!rename.ok && rename.error.code).toBe('TEAMS_LOCKED');
+        const move = game.movePlayers({ playerIds: ['p1'], teamId: 'team-2' });
+        expect(!move.ok && move.error.code).toBe('TEAMS_LOCKED');
+      });
+
+      it('is refused before teams exist', () => {
+        const fresh = unwrap(createGame([teamPlan(true)]));
+        const result = fresh.renameTeam({ teamId: 'team-1', name: 'Nobody' });
+        expect(!result.ok && result.error.code).toBe('UNKNOWN_TEAM');
+      });
+    });
+
     it('sends a latecomer to the smallest team', () => {
       joinPlayers(5);
       unwrap(game.generateTeams({ teamCount: 2, random }));

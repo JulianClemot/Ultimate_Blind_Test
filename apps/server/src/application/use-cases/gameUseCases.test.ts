@@ -23,8 +23,10 @@ import { GenerateTeams } from './GenerateTeams';
 import { JoinGame } from './JoinGame';
 import { JudgeAnswer } from './JudgeAnswer';
 import { LaunchGame } from './LaunchGame';
+import { MovePlayers } from './MovePlayers';
 import { NextSong } from './NextSong';
 import { RejoinGame } from './RejoinGame';
+import { RenameTeam } from './RenameTeam';
 import { RevealSong } from './RevealSong';
 import { SubmitAnswer } from './SubmitAnswer';
 import { UpdateGameDesign } from './UpdateGameDesign';
@@ -424,6 +426,101 @@ describe('party use cases', () => {
 
       unwrap(await generate(host));
       expect((await nextSong(host)).ok).toBe(true);
+    });
+
+    describe('host adjustments', () => {
+      const setupTeams = async () => {
+        const launched = await launch([teamRound('42')]);
+        const players = [];
+        for (const name of ['Alice', 'Bob', 'Chloé', 'Dan']) {
+          players.push(unwrap(await join(name)).player);
+        }
+        unwrap(await generate(launched.host));
+        return { ...launched, players };
+      };
+
+      it('renames a team and tells everybody', async () => {
+        const { game, host } = await setupTeams();
+        const before = events.events.length;
+
+        unwrap(
+          await new RenameTeam(games, events).execute({
+            ...host,
+            teamId: 'team-1',
+            name: 'Les Rois',
+          }),
+        );
+
+        expect(game.listTeams()[0]?.name).toBe('Les Rois');
+        expect(events.events).toHaveLength(before + 1);
+        expect(events.types().at(-1)).toBe('teamsUpdated');
+      });
+
+      it('moves players to another team and tells everybody', async () => {
+        const { game, host, players } = await setupTeams();
+        const player = players[0]!;
+        const target = game.listTeams().find((team) => team.id !== game.teamOf(player.id)?.id)!;
+        const before = events.events.length;
+
+        unwrap(
+          await new MovePlayers(games, events).execute({
+            ...host,
+            playerIds: [player.id],
+            teamId: target.id,
+          }),
+        );
+
+        expect(game.teamOf(player.id)?.id).toBe(target.id);
+        expect(events.events).toHaveLength(before + 1);
+        expect(events.types().at(-1)).toBe('teamsUpdated');
+      });
+
+      it('is reserved to the host', async () => {
+        const { game, players } = await setupTeams();
+        const intruder = { gameId: game.id, hostToken: 'guess' };
+        const renamed = await new RenameTeam(games, events).execute({
+          ...intruder,
+          teamId: 'team-1',
+          name: 'Hacked',
+        });
+        const moved = await new MovePlayers(games, events).execute({
+          ...intruder,
+          playerIds: [players[0]!.id],
+          teamId: 'team-2',
+        });
+        expect(!renamed.ok && renamed.error.code).toBe('NOT_HOST');
+        expect(!moved.ok && moved.error.code).toBe('NOT_HOST');
+        expect(game.listTeams()[0]?.name).not.toBe('Hacked');
+      });
+
+      it('reports domain errors without publishing anything', async () => {
+        const { host } = await setupTeams();
+        const before = events.events.length;
+        const result = await new RenameTeam(games, events).execute({
+          ...host,
+          teamId: 'team-9',
+          name: 'Ghosts',
+        });
+        expect(!result.ok && result.error.code).toBe('UNKNOWN_TEAM');
+        expect(events.events).toHaveLength(before);
+      });
+
+      it('is refused once the party started', async () => {
+        const { host, players } = await setupTeams();
+        unwrap(await nextSong(host));
+        const renamed = await new RenameTeam(games, events).execute({
+          ...host,
+          teamId: 'team-1',
+          name: 'Too late',
+        });
+        const moved = await new MovePlayers(games, events).execute({
+          ...host,
+          playerIds: [players[0]!.id],
+          teamId: 'team-2',
+        });
+        expect(!renamed.ok && renamed.error.code).toBe('TEAMS_LOCKED');
+        expect(!moved.ok && moved.error.code).toBe('TEAMS_LOCKED');
+      });
     });
 
     it('tells everybody about a latecomer joining a team, but only once teams exist', async () => {

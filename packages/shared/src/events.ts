@@ -19,7 +19,9 @@ import type {
   GenerateTeamsPayload,
   JoinGamePayload,
   JudgeAnswerPayload,
+  MovePlayersPayload,
   RejoinGamePayload,
+  RenameTeamPayload,
   SubmitAnswerPayload,
 } from './schemas';
 
@@ -35,6 +37,10 @@ export interface ClientToServerEvents {
   'answer:judge': (payload: JudgeAnswerPayload, ack: Ack<AnswerDto>) => void;
   /** Lobby only: (re)shuffles every player into balanced, freshly named teams. */
   'teams:generate': (payload: GenerateTeamsPayload, ack: Ack<readonly TeamDto[]>) => void;
+  /** Lobby only: replaces a team's name. */
+  'teams:rename': (payload: RenameTeamPayload, ack: Ack<readonly TeamDto[]>) => void;
+  /** Lobby only: puts players in another team, all or none (a team is never left empty). */
+  'teams:move-players': (payload: MovePlayersPayload, ack: Ack<readonly TeamDto[]>) => void;
   'game:finish': (ack: Ack<readonly ScoreDto[]>) => void;
   'player:join': (payload: JoinGamePayload, ack: Ack<PlayerSessionDto>) => void;
   'player:rejoin': (payload: RejoinGamePayload, ack: Ack<PlayerSessionDto>) => void;
@@ -59,7 +65,7 @@ export interface ServerToClientEvents {
   'song:revealed': (reveal: RevealDto) => void;
   /** To everyone: scores of revealed songs changed after a correction. */
   'scoreboard:updated': (scoreboard: readonly ScoreDto[]) => void;
-  /** To everyone: teams were generated, or a latecomer joined one. */
+  /** To everyone: teams were generated, renamed or rearranged, or a latecomer joined one. */
   'teams:updated': (teams: readonly TeamDto[]) => void;
   /** To everyone, with `scoreboard:updated`: team points changed after a correction. */
   'team-scores:updated': (scores: readonly TeamScoreDto[]) => void;

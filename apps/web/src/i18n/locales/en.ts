@@ -171,6 +171,10 @@ export const en = {
     shuffleTeams: 'Shuffle the teams again',
     needPlayers: 'Wait for at least 2 players to join.',
     lateJoiners: 'Players who join later are added to the smallest team.',
+    adjustTeamsHint:
+      'Rename the teams, click players to select several, then drag them onto a team (or use the button of a team) until the first song.',
+    teamNameLabel: 'Name of team {{number}}',
+    moveSelectedHere: 'Move {{count}} selected here',
   },
   recap: {
     finalResults: '{{name}} — final results',
@@ -294,7 +298,11 @@ export const en = {
     UNKNOWN_PLAYER: 'Player is not part of this game',
     UNKNOWN_ANSWER: 'No such answer for the current song',
     EMPTY_DESIGN: 'Add at least one round before launching the game',
-    TEAMS_LOCKED: 'Teams can only be generated before the first song',
+    TEAMS_LOCKED: 'Teams can only be changed before the first song',
+    UNKNOWN_TEAM: 'No such team',
+    INVALID_TEAM_NAME: 'A team name must contain 1 to 30 characters',
+    TEAM_NAME_TAKEN: 'Another team already has this name',
+    TEAM_WOULD_BE_EMPTY: 'Every team needs at least one player',
     UNKNOWN_SUGGESTION: 'No such suggestion for the current round',
     NO_SOURCE_TRACKS: 'No track of the playlist could be linked to a film, series or game',
     TEAMS_REQUIRED: 'Generate the teams before playing a team round',
