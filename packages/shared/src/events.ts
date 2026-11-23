@@ -1,6 +1,7 @@
 import type {
   AllAnsweredDto,
   AnswerDto,
+  EliminationDto,
   ErrorDto,
   GameRecapDto,
   GameSnapshotDto,
@@ -72,6 +73,8 @@ export interface ServerToClientEvents {
   'song:revealed': (reveal: RevealDto) => void;
   /** To everyone: scores of revealed songs changed after a correction. */
   'scoreboard:updated': (scoreboard: readonly ScoreDto[]) => void;
+  /** To everyone, with `scoreboard:updated`, during a last-standing round: who is out changed. */
+  'elimination:updated': (elimination: EliminationDto) => void;
   /** To everyone: teams were generated, renamed or rearranged, or a latecomer joined one. */
   'teams:updated': (teams: readonly TeamDto[]) => void;
   /** To everyone, with `scoreboard:updated`: team points changed after a correction. */

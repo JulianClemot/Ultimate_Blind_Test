@@ -1,5 +1,6 @@
 import type {
   AnswerDto,
+  EliminationDto,
   GameRecapDto,
   PlayerSessionDto,
   RevealDto,
@@ -23,6 +24,7 @@ export type PlayerGameAction =
   | { type: 'allAnswered'; songId: string }
   | { type: 'songRevealed'; reveal: RevealDto }
   | { type: 'scoreboardUpdated'; scoreboard: readonly ScoreDto[] }
+  | { type: 'eliminationUpdated'; elimination: EliminationDto }
   | { type: 'gameFinished'; scoreboard: readonly ScoreDto[] }
   | { type: 'recapReceived'; recap: GameRecapDto };
 
@@ -55,6 +57,7 @@ export const playerGameReducer = (
             reveal: null,
             myAnswers: [],
             everyoneAnswered: false,
+            elimination: action.song.elimination,
           };
     case 'answerSent':
       if (action.answer.songId !== state.currentSong?.id) return state;
@@ -76,7 +79,10 @@ export const playerGameReducer = (
         reveal: action.reveal,
         scoreboard: action.reveal.scoreboard,
         teamScoreboard: action.reveal.teamScoreboard,
+        elimination: action.reveal.elimination,
       };
+    case 'eliminationUpdated':
+      return { ...state, elimination: action.elimination };
     case 'scoreboardUpdated':
       return { ...state, scoreboard: action.scoreboard };
     case 'gameFinished':

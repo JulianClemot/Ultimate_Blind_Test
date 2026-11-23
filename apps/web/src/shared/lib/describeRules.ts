@@ -23,7 +23,15 @@ export const describeRules = (rules: RoundRulesDto, roundType?: RoundTypeDto): s
   const asksTitle = rules.titlePoints > 0;
   const asksArtist = rules.artistPoints > 0;
   const asksSource = rules.sourcePoints > 0;
-  const lines = [t('rules.songsAndTime', { count: rules.songCount, time: rules.answerTimeSec })];
+  const lastStanding = roundType === 'last-standing';
+  // A last-standing round has no fixed length: it ends when one player is left.
+  const lines = lastStanding
+    ? [
+        t('rules.lastStanding', { time: rules.answerTimeSec }),
+        t('rules.eliminationSlowest', { count: rules.eliminationCount }),
+        t('rules.eliminationSilent'),
+      ]
+    : [t('rules.songsAndTime', { count: rules.songCount, time: rules.answerTimeSec })];
 
   if (asksSource) {
     lines.push(

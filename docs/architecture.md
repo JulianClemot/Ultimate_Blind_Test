@@ -130,6 +130,22 @@ These rules are enforced by `pnpm depcruise` (`.dependency-cruiser.cjs`) in CI.
   sockets then leave the rooms), then `scoreboard:updated` (+ `teams:updated` with teams), and
   triggers the auto-reveal if the removed player was the last one a song was waiting for. A
   kicked player's `player:rejoin` fails with `UNKNOWN_PLAYER`. After the end: `GAME_FINISHED`.
+- **Last player standing**: a round type `last-standing` with a rule `eliminationCount` (X, 1–25,
+  default 1; designs saved before it restore with 1). It has no song count: `songCount` is only a
+  safety cap (preset 50) and the round ends when one player is left. After each **revealed** song
+  (`eliminatedAfter`, pure, `domain/game/elimination.ts`) a player is out when they found nothing (no
+  answer, or no asked part credited by the verdict), plus the X slowest finders by server reception
+  time. Somebody always stays: if everybody would leave, the fastest finder is spared; if nobody found
+  the song, nobody leaves. Who is out is **derived** by `Round.survivors()` from the revealed songs
+  and the host's verdicts (never stored), so a correction after the reveal moves people in or out; it
+  is pushed with `elimination:updated` (next to `scoreboard:updated`). The running of a round is the
+  players present when its first song starts: latecomers watch, a kicked player leaves it.
+  Eliminated players keep their socket and see everything but `answer:submit` fails with
+  `PLAYER_ELIMINATED`; `everyoneHasAnswered` (auto-reveal) only waits for those still in. Points are
+  scored as usual. `EliminationDto` (`remaining`, `eliminated`, `leftAfterCurrentSong`) is carried by
+  `SongDto`, `RevealDto`, `GameSnapshotDto` and `PlayerSessionDto`, and only ever reflects revealed
+  songs. Not handled: a playlist running out of tracks before a winner emerges still ends with
+  `PLAYLIST_EXHAUSTED` (the host then finishes the game).
 - Clients re-identify on every `connect` (`useOnConnect`), so a phone going to sleep or a page
   refresh resumes the game (session kept in `sessionStorage`).
 

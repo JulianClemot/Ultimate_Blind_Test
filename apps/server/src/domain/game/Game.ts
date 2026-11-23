@@ -59,6 +59,17 @@ export interface Score {
   readonly points: number;
 }
 
+/** Where a last-standing round stands, as far as revealed songs tell. */
+export interface EliminationState {
+  readonly roundNumber: number;
+  /** Still in the running. */
+  readonly remaining: readonly Player[];
+  /** Out, in the order they left. */
+  readonly eliminated: readonly Player[];
+  /** Those who left with the song just revealed (empty while it is playing). */
+  readonly leftAfterCurrentSong: readonly Player[];
+}
+
 export interface GenerateTeamsCommand {
   readonly teamCount: number;
   readonly random: IntSource;
@@ -166,6 +177,7 @@ export class Game {
     this.players.delete(playerId);
     this.teamOfPlayer.delete(playerId);
     for (const round of this.rounds) {
+      round.forget(playerId);
       for (const song of round.listSongs()) song.removeAnswersOf(playerId);
     }
     this.kickedNames.push(player.name);
@@ -336,7 +348,14 @@ export class Game {
     const round = this.upcomingRound;
     if (!round) return err(gameError('GAME_FINISHED', 'Every round has been played'));
     round.captureSuggestions(command.playlistTracks ?? [command.track]);
-    return ok(round.addSong(command.songId, command.startedAt, command.track));
+    return ok(
+      round.addSong(
+        command.songId,
+        command.startedAt,
+        command.track,
+        this.listPlayers().map((player) => player.id),
+      ),
+    );
   }
 
   /** Ends the party, after the current song was revealed. Can be done before the last round. */
@@ -365,6 +384,9 @@ export class Game {
     if (!song || this.finished) {
       return err(gameError('NO_ACTIVE_SONG', 'No song is being played'));
     }
+    if (this.currentRound?.canAnswer(command.playerId) === false) {
+      return err(gameError('PLAYER_ELIMINATED', 'You are out of this round'));
+    }
     if (suggestionId === undefined) return song.submit(command);
 
     const suggestion = this.currentRound?.findSuggestion(suggestionId);
@@ -384,7 +406,33 @@ export class Game {
   everyoneHasAnswered(): boolean {
     const song = this.currentSong;
     if (!song || song.isRevealed || this.finished || this.players.size === 0) return false;
-    return this.listPlayers().every((player) => song.hasAnswered(player.id));
+    // Players already out of a last-standing round have nothing to send.
+    const round = this.currentRound;
+    return this.listPlayers().every(
+      (player) => song.hasAnswered(player.id) || round?.canAnswer(player.id) === false,
+    );
+  }
+
+  /**
+   * Last-standing round being played (or about to end): who is still in, who left and who left
+   * after the given song. Only revealed songs count, so nothing leaks before the reveal.
+   */
+  eliminationOf(round: Round | undefined = this.currentRound): EliminationState | undefined {
+    if (!round?.isLastStanding) return undefined;
+    const byId = (ids: readonly string[]) =>
+      ids.flatMap((id) => {
+        const player = this.players.get(id);
+        return player ? [player] : [];
+      });
+    const lastSong = round.currentSong;
+    return {
+      roundNumber: round.number,
+      remaining: byId(round.survivors()),
+      eliminated: byId(round.eliminated()),
+      leftAfterCurrentSong: lastSong?.isRevealed
+        ? byId(round.eliminatedAfterSong(lastSong.id))
+        : [],
+    };
   }
 
   judgeAnswer(answerId: string, verdict: Verdict): Result<Answer, GameError> {

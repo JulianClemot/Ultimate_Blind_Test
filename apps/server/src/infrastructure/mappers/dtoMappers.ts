@@ -1,5 +1,6 @@
 import type {
   AnswerDto,
+  EliminationDto,
   GameDesignDto,
   GameRecapDto,
   GameSnapshotDto,
@@ -23,6 +24,7 @@ import type {
   Game,
   GameDesign,
   Player,
+  Round,
   RoundPlan,
   Score,
   Song,
@@ -111,6 +113,17 @@ const toTeamScoreDto = ({ team, points }: TeamScore): TeamScoreDto => ({
 export const toPublicTeamScoreboard = (game: Game): TeamScoreDto[] =>
   game.teamScoreboard({ revealedOnly: true }).map(toTeamScoreDto);
 
+export const toEliminationDto = (game: Game, round?: Round): EliminationDto | null => {
+  const state = game.eliminationOf(round);
+  if (!state) return null;
+  return {
+    roundNumber: state.roundNumber,
+    remaining: state.remaining.map(toPlayerDto),
+    eliminated: state.eliminated.map(toPlayerDto),
+    leftAfterCurrentSong: state.leftAfterCurrentSong.map(toPlayerDto),
+  };
+};
+
 export const toSongDto = (game: Game, song: Song): SongDto => {
   const round = game.listRounds()[song.roundNumber - 1];
   return {
@@ -128,6 +141,7 @@ export const toSongDto = (game: Game, song: Song): SongDto => {
     revealed: song.isRevealed,
     // Only id and label: the structured title/artist stay server-side.
     suggestions: (round?.suggestions ?? []).map(({ id, label }) => ({ id, label })),
+    elimination: toEliminationDto(game, round),
   };
 };
 
@@ -150,6 +164,7 @@ export const toRevealDto = (game: Game, song: Song): RevealDto => ({
   source: song.track.source?.name ?? null,
   scoreboard: toPublicScoreboard(game),
   teamScoreboard: toPublicTeamScoreboard(game),
+  elimination: toEliminationDto(game),
 });
 
 export const toAnswerDto = (game: Game, answer: Answer): AnswerDto => ({
@@ -228,6 +243,7 @@ export const toGameSnapshotDto = (game: Game): GameSnapshotDto => {
     answers: song ? song.answersByArrival().map((a) => toAnswerDto(game, a)) : [],
     scoreboard: toPublicScoreboard(game),
     teamScoreboard: toPublicTeamScoreboard(game),
+    elimination: toEliminationDto(game),
     everyoneAnswered: game.everyoneHasAnswered(),
     hasNextSong: game.upcomingRound !== undefined,
     recap: toGameRecapDto(game),
@@ -251,6 +267,7 @@ export const toPlayerSessionDto = ({ game, player }: PlayerSession): PlayerSessi
     everyoneAnswered: game.everyoneHasAnswered(),
     scoreboard: toPublicScoreboard(game),
     teamScoreboard: toPublicTeamScoreboard(game),
+    elimination: toEliminationDto(game),
     recap: toGameRecapDto(game),
   };
 };

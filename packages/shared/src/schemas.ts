@@ -15,6 +15,7 @@ export const roundTypeSchema = z.enum([
   'fast-forward',
   'screen',
   'game',
+  'last-standing',
 ]);
 
 export const roundRulesSchema = z.object({
@@ -22,6 +23,8 @@ export const roundRulesSchema = z.object({
   winnerCount: z.number(),
   rankStep: z.number(),
   songCount: z.number(),
+  /** Absent from clients predating last-standing rounds. */
+  eliminationCount: z.number().default(1),
   titlePoints: z.number(),
   artistPoints: z.number(),
   /** Absent from clients predating rounds about films and series. */

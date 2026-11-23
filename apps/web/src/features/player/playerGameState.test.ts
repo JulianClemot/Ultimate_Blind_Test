@@ -19,6 +19,7 @@ const song: SongDto = {
   revealed: false,
   asksSource: false,
   suggestions: [],
+  elimination: null,
 };
 
 const playing = playerSession({ status: 'playing', currentSong: song });
@@ -69,6 +70,7 @@ describe('playerGameReducer', () => {
     const revealed = playerGameReducer(playing, {
       type: 'songRevealed',
       reveal: {
+        elimination: null,
         songId: 's1',
         title: 'Take On Me',
         artist: 'a-ha',
@@ -160,6 +162,7 @@ describe('playerGameReducer recap', () => {
       const revealed = playerGameReducer(playing, {
         type: 'songRevealed',
         reveal: {
+          elimination: null,
           songId: 's1',
           title: 'T',
           artist: 'A',

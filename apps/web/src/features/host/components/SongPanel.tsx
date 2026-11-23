@@ -94,7 +94,9 @@ export const SongPanel = ({
               {song.roundName || roundTypeInfo(song.roundType).label}
             </p>
             <p className="text-lg font-semibold">
-              {t('common.song', { number: song.number, count: song.songCount })}
+              {song.roundType === 'last-standing'
+                ? t('common.songInRound', { number: song.number })
+                : t('common.song', { number: song.number, count: song.songCount })}
             </p>
           </div>
           {open && remaining !== null && (

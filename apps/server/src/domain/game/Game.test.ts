@@ -834,4 +834,117 @@ describe('Game', () => {
       expect(recap?.songs[0]?.results[0]).toMatchObject({ foundSource: true, foundAtMs: 5 });
     });
   });
+
+  describe('last-standing rounds', () => {
+    const standing = (eliminationCount = 1) => {
+      const rules = unwrap(
+        RoundRules.create({ ...ROUND_PRESETS['last-standing'], eliminationCount }),
+      );
+      game = unwrap(createGame([{ ...plan(50, 'last-standing'), rules }, plan(1)]));
+      for (const [id, name] of [
+        ['p1', 'Alice'],
+        ['p2', 'Bob'],
+        ['p3', 'Chloé'],
+        ['p4', 'Dan'],
+      ] as const) {
+        unwrap(join(id, name));
+      }
+    };
+
+    /** Plays a song where the given players find it, in that order (others stay silent). */
+    const playSong = (finders: readonly string[]) => {
+      const song = unwrap(startSong());
+      finders.forEach((id, i) => unwrap(answer(id, T0 + 10 * (i + 1), `Title ${song.track.id}`)));
+      unwrap(game.revealSong(T0 + 1_000));
+    };
+
+    const remaining = () => game.eliminationOf()?.remaining.map((p) => p.id);
+
+    it('eliminates the silent players and the slowest finder after the reveal', () => {
+      standing();
+      playSong(['p1', 'p2', 'p3']);
+      expect(game.eliminationOf()?.leftAfterCurrentSong.map((p) => p.id)).toEqual(['p3', 'p4']);
+      expect(remaining()).toEqual(['p1', 'p2']);
+    });
+
+    it('reveals nothing about who is out while the song is playing', () => {
+      standing();
+      unwrap(startSong());
+      expect(remaining()).toEqual(['p1', 'p2', 'p3', 'p4']);
+      expect(game.eliminationOf()?.leftAfterCurrentSong).toEqual([]);
+    });
+
+    it('keeps going until one player is left, then moves on to the next round', () => {
+      standing();
+      playSong(['p1', 'p2', 'p3', 'p4']);
+      expect(game.upcomingRound?.number).toBe(1);
+      playSong(['p1', 'p2']);
+      expect(remaining()).toEqual(['p1']);
+      expect(game.currentRound?.isComplete).toBe(true);
+      expect(game.upcomingRound?.number).toBe(2);
+    });
+
+    it('refuses answers from eliminated players', () => {
+      standing();
+      playSong(['p1', 'p2', 'p3']);
+      unwrap(startSong());
+      const result = answer('p4', T0 + 5, 'Title t2');
+      expect(!result.ok && result.error.code).toBe('PLAYER_ELIMINATED');
+      expect(answer('p1', T0 + 5, 'Title t2').ok).toBe(true);
+    });
+
+    it('auto-reveals once the players still in have answered, not the eliminated', () => {
+      standing();
+      playSong(['p1', 'p2', 'p3']);
+      unwrap(startSong());
+      unwrap(answer('p1', T0 + 5, 'x'));
+      expect(game.everyoneHasAnswered()).toBe(false);
+      unwrap(answer('p2', T0 + 6, 'x'));
+      expect(game.everyoneHasAnswered()).toBe(true);
+    });
+
+    it('lets a latecomer watch: they were not in the running', () => {
+      standing();
+      playSong(['p1', 'p2', 'p3']);
+      unwrap(join('p5', 'Eve'));
+      unwrap(startSong());
+      const result = answer('p5', T0 + 5, 'Title t2');
+      expect(!result.ok && result.error.code).toBe('PLAYER_ELIMINATED');
+    });
+
+    it('follows a host correction of a verdict', () => {
+      standing();
+      const song = unwrap(startSong());
+      const title = `Title ${song.track.id}`;
+      unwrap(answer('p1', T0 + 10, title));
+      const typo = unwrap(answer('p2', T0 + 20, 'Tilte'));
+      unwrap(answer('p3', T0 + 30, title));
+      unwrap(game.revealSong(T0 + 1_000));
+      expect(remaining()).toEqual(['p1']);
+      unwrap(game.judgeAnswer(typo.id, { title: true, artist: false, source: false }));
+      expect(remaining()).toEqual(['p1', 'p2']);
+    });
+
+    it('never eliminates anyone for a song nobody found', () => {
+      standing();
+      playSong([]);
+      expect(remaining()).toEqual(['p1', 'p2', 'p3', 'p4']);
+    });
+
+    it('drops a kicked player from the running', () => {
+      standing();
+      unwrap(startSong());
+      unwrap(game.removePlayer('p4'));
+      unwrap(answer('p1', T0 + 5, 'x'));
+      unwrap(answer('p2', T0 + 6, 'x'));
+      unwrap(answer('p3', T0 + 7, 'x'));
+      expect(game.everyoneHasAnswered()).toBe(true);
+      expect(remaining()).toEqual(['p1', 'p2', 'p3']);
+    });
+
+    it('does not report elimination for other round types', () => {
+      standing();
+      expect(game.eliminationOf(game.listRounds()[1])).toBeUndefined();
+    });
+  });
 });

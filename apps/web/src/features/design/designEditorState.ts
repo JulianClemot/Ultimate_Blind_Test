@@ -137,12 +137,16 @@ export const designEditorReducer = (state: EditorState, action: EditorAction): E
     }
     case 'roundTypeChanged':
       // A new type resets the rules to its preset, except the number of songs, the team mode and the easy mode.
+      // A last-standing round has no song count of its own (only a cap): it never carries over.
       return updateRound(state, action.key, (round) => ({
         ...round,
         type: action.roundType,
         rules: {
           ...action.catalog.presets[action.roundType],
-          songCount: round.rules.songCount,
+          songCount:
+            round.type === 'last-standing' || action.roundType === 'last-standing'
+              ? action.catalog.presets[action.roundType].songCount
+              : round.rules.songCount,
           teamMode: round.rules.teamMode,
           easyMode: round.rules.easyMode,
         },
@@ -236,7 +240,11 @@ export const toUpdatePayload = (state: EditorState): UpdateGameDesignPayload => 
 export const roundWarnings = (round: EditorRound): string[] => {
   const warnings: string[] = [];
   if (!round.playlist.trim()) warnings.push(t('design.warnNoPlaylist'));
-  if (round.playableTracks !== null && round.playableTracks < round.rules.songCount) {
+  if (
+    round.type !== 'last-standing' &&
+    round.playableTracks !== null &&
+    round.playableTracks < round.rules.songCount
+  ) {
     warnings.push(
       t('design.warnFewTracks', { tracks: round.playableTracks, songs: round.rules.songCount }),
     );
@@ -259,5 +267,9 @@ export const roundWarnings = (round: EditorRound): string[] => {
   return warnings;
 };
 
+/** Songs of the game, not counting last-standing rounds: they end when one player is left. */
 export const totalSongs = (state: EditorState): number =>
-  state.rounds.reduce((sum, round) => sum + round.rules.songCount, 0);
+  state.rounds.reduce(
+    (sum, round) => sum + (round.type === 'last-standing' ? 0 : round.rules.songCount),
+    0,
+  );

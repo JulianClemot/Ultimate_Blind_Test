@@ -14,6 +14,7 @@ import { Card, CardTitle } from '@/shared/ui/card';
 import { ErrorMessage } from '@/shared/ui/ErrorMessage';
 import { PageLayout } from '@/shared/ui/PageLayout';
 import { Recap } from '@/shared/ui/Recap';
+import { EliminationPanel } from '@/shared/ui/EliminationPanel';
 import { GameOverview } from '@/shared/ui/GameOverview';
 import { Scoreboard } from '@/shared/ui/Scoreboard';
 import { TeamScoreboard } from '@/shared/ui/TeamScoreboard';
@@ -58,6 +59,10 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
   const song = state?.currentSong ?? null;
   const open = song !== null && !song.revealed;
   const hasAnswered = (state?.myAnswers.length ?? 0) > 0;
+  // Out of a last-standing round: watching only, nothing to send.
+  const isOut =
+    state?.elimination != null &&
+    !state.elimination.remaining.some((p) => p.id === session.playerId);
   const remaining = useCountdown(open ? song.startedAt + song.answerTimeSec * 1000 : null);
 
   if (kicked) {
@@ -152,7 +157,9 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
                 {song.roundName || roundTypeInfo(song.roundType).label}
               </p>
               <p className="text-lg font-semibold">
-                {t('common.song', { number: song.number, count: song.songCount })}
+                {song.roundType === 'last-standing'
+                  ? t('common.songInRound', { number: song.number })
+                  : t('common.song', { number: song.number, count: song.songCount })}
               </p>
             </div>
             {open && remaining !== null && (
@@ -166,19 +173,23 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
           </div>
         )}
 
-        {song && <SongProgress song={song} answers={state.myAnswers} />}
+        {song && !isOut && <SongProgress song={song} answers={state.myAnswers} />}
 
-        {open && state.everyoneAnswered && (
+        {song && state.elimination && (
+          <EliminationPanel elimination={state.elimination} playerId={state.player.id} />
+        )}
+
+        {open && !isOut && state.everyoneAnswered && (
           <p role="status" className="rounded-lg bg-secondary p-4 text-center font-semibold">
             {t('player.everyoneAnswered')}
           </p>
         )}
-        {open && !state.everyoneAnswered && hasAnswered && (
+        {open && !isOut && !state.everyoneAnswered && hasAnswered && (
           <p role="status" className="font-medium">
             {t('player.answerSent')}
           </p>
         )}
-        {open && !hasAnswered && remaining !== 0 && (
+        {open && !isOut && !hasAnswered && remaining !== 0 && (
           <>
             <AnswerForm
               suggestions={song.suggestions}
@@ -189,7 +200,7 @@ const PlayerGame = ({ session }: { session: PlayerSession }) => {
             <ErrorMessage error={submitAnswer.error} />
           </>
         )}
-        {open && !hasAnswered && remaining === 0 && (
+        {open && !isOut && !hasAnswered && remaining === 0 && (
           <p className="text-muted-foreground">{t('player.timeIsUp')}</p>
         )}
 

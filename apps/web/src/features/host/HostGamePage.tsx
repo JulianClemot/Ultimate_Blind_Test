@@ -10,6 +10,7 @@ import { Card, CardTitle } from '@/shared/ui/card';
 import { ErrorMessage } from '@/shared/ui/ErrorMessage';
 import { PageLayout } from '@/shared/ui/PageLayout';
 import { Recap } from '@/shared/ui/Recap';
+import { EliminationPanel } from '@/shared/ui/EliminationPanel';
 import { GameOverview } from '@/shared/ui/GameOverview';
 import { Scoreboard } from '@/shared/ui/Scoreboard';
 
@@ -153,6 +154,13 @@ const HostGame = ({ session }: { session: HostSession }) => {
         />
         <ErrorMessage error={nextSong.error ?? revealSong.error ?? finishGame.error} />
       </Card>
+
+      {song && game.elimination && (
+        <Card>
+          <CardTitle>{t('elimination.title')}</CardTitle>
+          <EliminationPanel elimination={game.elimination} />
+        </Card>
+      )}
 
       {song && (
         <Card>

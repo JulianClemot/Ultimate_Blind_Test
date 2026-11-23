@@ -27,6 +27,7 @@ interface RoundEditorProps {
 /** Translation keys (under `design.`) of the label and optional hint of each numeric rule. */
 const NUMERIC_RULES: readonly { rule: NumericRuleDto; label: string; hint?: string }[] = [
   { rule: 'songCount', label: 'songs' },
+  { rule: 'eliminationCount', label: 'eliminationCount', hint: 'eliminationCountHint' },
   { rule: 'answerTimeSec', label: 'answerTime' },
   { rule: 'excerptSec', label: 'excerpt', hint: 'excerptHint' },
   { rule: 'titlePoints', label: 'titlePoints', hint: 'titlePointsHint' },
@@ -37,7 +38,10 @@ const NUMERIC_RULES: readonly { rule: NumericRuleDto; label: string; hint?: stri
 ];
 
 /** A round asks the film or series, or the title and the artist: the other points are hidden. */
-const shownRule = (rule: NumericRuleDto, asksSource: boolean): boolean => {
+const shownRule = (rule: NumericRuleDto, asksSource: boolean, lastStanding: boolean): boolean => {
+  // A last-standing round ends when one player is left: it is set by the eliminations, not by a song count.
+  if (rule === 'songCount') return !lastStanding;
+  if (rule === 'eliminationCount') return lastStanding;
   if (rule === 'sourcePoints') return asksSource;
   if (rule === 'titlePoints' || rule === 'artistPoints' || rule === 'bothBonus') return !asksSource;
   return true;
@@ -215,19 +219,19 @@ export const RoundEditor = ({
               ))}
             </Select>
           </Field>
-          {NUMERIC_RULES.filter(({ rule }) => shownRule(rule, asksSource)).map(
-            ({ rule, label, hint }) => (
-              <Field
-                key={rule}
-                label={t(
-                  `design.${label === 'sourcePoints' && round.type === 'game' ? 'gamePoints' : label}`,
-                )}
-                {...(hint ? { hint: t(`design.${hint}`) } : {})}
-              >
-                <RuleInput rule={rule} round={round} catalog={catalog} dispatch={dispatch} />
-              </Field>
-            ),
-          )}
+          {NUMERIC_RULES.filter(({ rule }) =>
+            shownRule(rule, asksSource, round.type === 'last-standing'),
+          ).map(({ rule, label, hint }) => (
+            <Field
+              key={rule}
+              label={t(
+                `design.${label === 'sourcePoints' && round.type === 'game' ? 'gamePoints' : label}`,
+              )}
+              {...(hint ? { hint: t(`design.${hint}`) } : {})}
+            >
+              <RuleInput rule={rule} round={round} catalog={catalog} dispatch={dispatch} />
+            </Field>
+          ))}
         </div>
       </details>
 

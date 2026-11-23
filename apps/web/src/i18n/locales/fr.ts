@@ -49,6 +49,11 @@ export const fr: Messages = {
       label: 'Films & séries',
       description: 'Devinez le film ou la série dont vient le morceau, au lieu de son titre.',
     },
+    'last-standing': {
+      label: 'Dernier survivant',
+      description:
+        "Après chaque morceau, les réponses correctes les plus lentes (et ceux qui n'ont rien trouvé) sont éliminées. Le dernier en lice gagne ; pas de nombre de morceaux fixé.",
+    },
   },
   rules: {
     songsAndTime_one: '{{count}} morceau, {{time}} s pour répondre à chacun',
@@ -72,6 +77,25 @@ export const fr: Messages = {
     playbackRate: 'Les morceaux sont joués à la vitesse ×{{rate}}',
     easyMode:
       'Mode facile : des suggestions apparaissent pendant la saisie ; en choisir une ne rapporte aucun bonus',
+    lastStanding:
+      'Dernier survivant : {{time}} s pour répondre à chaque morceau, autant de morceaux que nécessaire',
+    eliminationSlowest_one: 'Après chaque morceau, la réponse correcte la plus lente est éliminée',
+    eliminationSlowest_other:
+      'Après chaque morceau, les {{count}} réponses correctes les plus lentes sont éliminées',
+    eliminationSilent:
+      "Celui qui ne trouve rien est éliminé aussi, et le dernier en lice l'emporte",
+  },
+  elimination: {
+    title: 'Dernier survivant',
+    remaining_one: '{{count}} joueur encore en lice',
+    remaining_other: '{{count}} joueurs encore en lice',
+    winner: '{{name}} est le dernier survivant !',
+    leftNow: 'Éliminés après ce morceau : {{names}}',
+    stillIn: 'En lice',
+    out: 'Éliminés',
+    youAreOutTitle: 'Vous êtes éliminé !',
+    youAreOut: 'Vous pouvez continuer à regarder, mais plus répondre.',
+    youWon: 'Vous êtes le dernier survivant — bravo !',
   },
   awards: {
     'fastest-finger': { title: 'Doigt le plus rapide', detail: '{{seconds}} s en moyenne' },
@@ -266,6 +290,9 @@ export const fr: Messages = {
     answerTime: 'Temps de réponse (s)',
     excerpt: 'Musique jouée (s)',
     excerptHint: "Sur l'extrait de 30 s",
+    eliminationCount: 'Joueurs éliminés par morceau',
+    eliminationCountHint:
+      "Les réponses correctes les plus lentes sont éliminées après chaque morceau ; ceux qui n'ont rien trouvé le sont aussi.",
     titlePoints: 'Points du titre',
     titlePointsHint: '0 = titre non demandé',
     artistPoints: "Points de l'artiste",

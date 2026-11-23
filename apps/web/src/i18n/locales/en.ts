@@ -44,6 +44,11 @@ export const en = {
       label: 'Movies & series',
       description: 'Guess the film or TV series the song comes from instead of its title.',
     },
+    'last-standing': {
+      label: 'Last player standing',
+      description:
+        'After each song the slowest correct answers (and anyone who found nothing) are out. The last player in wins; there is no fixed number of songs.',
+    },
   },
   rules: {
     songsAndTime_one: '{{count}} song, {{time}} s to answer each',
@@ -66,6 +71,22 @@ export const en = {
     excerpt: 'Only the first {{count}} s of each song are played',
     playbackRate: 'Songs are played at ×{{rate}} speed',
     easyMode: 'Easy mode: suggestions appear as you type; picking one scores no bonus',
+    lastStanding: 'Last player standing: {{time}} s to answer each song, as many songs as it takes',
+    eliminationSlowest_one: 'After each song, the slowest correct answer is out',
+    eliminationSlowest_other: 'After each song, the {{count}} slowest correct answers are out',
+    eliminationSilent: 'Anyone who finds nothing is out too, and the last player in wins',
+  },
+  elimination: {
+    title: 'Last player standing',
+    remaining_one: '{{count}} player still in',
+    remaining_other: '{{count}} players still in',
+    winner: '{{name}} is the last one standing!',
+    leftNow: 'Out after this song: {{names}}',
+    stillIn: 'Still in',
+    out: 'Out',
+    youAreOutTitle: 'You are out!',
+    youAreOut: 'You can keep watching, but you can no longer answer.',
+    youWon: 'You are the last one standing — congratulations!',
   },
   awards: {
     'fastest-finger': { title: 'Fastest finger', detail: '{{seconds}} s on average' },
@@ -259,6 +280,9 @@ export const en = {
     answerTime: 'Answer time (s)',
     excerpt: 'Music played (s)',
     excerptHint: 'Out of the 30 s preview',
+    eliminationCount: 'Players out per song',
+    eliminationCountHint:
+      'The slowest correct answers leave after each song; players who find nothing leave too.',
     titlePoints: 'Title points',
     titlePointsHint: '0 = title not asked',
     artistPoints: 'Artist points',

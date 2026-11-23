@@ -2,6 +2,7 @@ import type { GameEventPublisher } from '../../../application';
 import type { Answer, Game, Player, Song } from '../../../domain';
 import {
   toAnswerDto,
+  toEliminationDto,
   toGameRecapDto,
   toHostSongDto,
   toPlayerDto,
@@ -64,6 +65,8 @@ export class SocketIoGameEventPublisher implements GameEventPublisher {
     if (game.hasTeams) {
       this.io.to(rooms.game(game.id)).emit('team-scores:updated', toPublicTeamScoreboard(game));
     }
+    const elimination = toEliminationDto(game);
+    if (elimination) this.io.to(rooms.game(game.id)).emit('elimination:updated', elimination);
     // A correction after the end changes the awards and the replay too.
     if (game.status === 'finished') this.emitRecap(game);
   }

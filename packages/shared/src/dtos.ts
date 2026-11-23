@@ -2,7 +2,8 @@
 
 // ── Game designs ────────────────────────────────────────────────────────────
 
-export type RoundTypeDto = 'classic' | 'everyone' | 'flash' | 'fast-forward' | 'screen' | 'game';
+export type RoundTypeDto =
+  'classic' | 'everyone' | 'flash' | 'fast-forward' | 'screen' | 'game' | 'last-standing';
 export type ScoringDto = 'first' | 'everyone';
 
 export interface RoundRulesDto {
@@ -12,6 +13,11 @@ export interface RoundRulesDto {
   /** With `first` scoring: points lost by each place (the 2nd gets this many less than the 1st…). */
   readonly rankStep: number;
   readonly songCount: number;
+  /**
+   * Last-standing rounds: how many of the slowest correct answerers leave after each song (those
+   * who found nothing leave too). Ignored by the other rounds.
+   */
+  readonly eliminationCount: number;
   readonly titlePoints: number;
   readonly artistPoints: number;
   /** Points for finding the film or series; asked instead of the title and the artist. */
@@ -132,6 +138,20 @@ export interface RoundSummaryDto {
   readonly rules: RoundRulesDto;
 }
 
+/**
+ * Where a last-standing round stands, as far as revealed songs tell (nothing leaks before the
+ * reveal). The last player in is the winner.
+ */
+export interface EliminationDto {
+  readonly roundNumber: number;
+  /** Still in the running. One player left means the round is won. */
+  readonly remaining: readonly PlayerDto[];
+  /** Out, in the order they left. */
+  readonly eliminated: readonly PlayerDto[];
+  /** Those who left with the song just revealed; empty while it is being played. */
+  readonly leftAfterCurrentSong: readonly PlayerDto[];
+}
+
 /** A track of the round's playlist a player may pick in an easy round. */
 export interface SuggestionDto {
   readonly id: string;
@@ -160,6 +180,8 @@ export interface SongDto {
    * (nothing tells which). Empty otherwise, and always for the host.
    */
   readonly suggestions: readonly SuggestionDto[];
+  /** Last-standing rounds: who is in the running when the song starts. Null in other rounds. */
+  readonly elimination: EliminationDto | null;
 }
 
 /**
@@ -188,6 +210,8 @@ export interface RevealDto {
   readonly scoreboard: readonly ScoreDto[];
   /** Empty until teams are generated. */
   readonly teamScoreboard: readonly TeamScoreDto[];
+  /** Set during a last-standing round. */
+  readonly elimination: EliminationDto | null;
 }
 
 /** Every player answered `songId`: the reveal follows after a short pause. */
@@ -296,6 +320,8 @@ export interface GameSnapshotDto {
   /** Scores of revealed songs, like the players see them. */
   readonly scoreboard: readonly ScoreDto[];
   readonly teamScoreboard: readonly TeamScoreDto[];
+  /** Set while the current round is a last-standing one. */
+  readonly elimination: EliminationDto | null;
   /** True while the song is open and every player answered it: the reveal is about to happen. */
   readonly everyoneAnswered: boolean;
   /** False when the next action finishes the game. */
@@ -336,6 +362,8 @@ export interface PlayerSessionDto {
   /** Scores of revealed songs only. */
   readonly scoreboard: readonly ScoreDto[];
   readonly teamScoreboard: readonly TeamScoreDto[];
+  /** Set while the current round is a last-standing one. */
+  readonly elimination: EliminationDto | null;
   /** Null until the game is finished. */
   readonly recap: GameRecapDto | null;
 }

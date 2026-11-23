@@ -1114,6 +1114,105 @@ describe('blind test (HTTP + Socket.IO)', () => {
     });
   });
 
+  describe('last-standing rounds', () => {
+    const standingRound = (): RoundPlanPayload => ({
+      name: 'Last one standing',
+      type: 'last-standing',
+      playlist: '9',
+      playlistTitle: null,
+      rules: catalog.presets['last-standing'],
+      sourceOverrides: {},
+    });
+
+    const startStanding = async () => {
+      const { party, host } = await launchParty([standingRound()]);
+      const join = async (playerName: string) => {
+        const socket = await openSocket();
+        const joined = await socket.emitWithAck('player:join', { code: party.code, playerName });
+        if (!joined.ok) throw new Error(joined.error.message);
+        return socket;
+      };
+      const [alice, bob, chloe] = [await join('Alice'), await join('Bob'), await join('Chloé')];
+      const next = await host.emitWithAck('song:next');
+      if (!next.ok || next.data.kind !== 'song') throw new Error('expected a song');
+      const right = `${next.data.song.title} ${next.data.song.artist}`;
+      const send = (socket: typeof alice, text: string) =>
+        socket.emitWithAck('answer:submit', { text, clientSentAt: Date.now() });
+      return { party, host, alice, bob, chloe, right, send };
+    };
+
+    it('offers a preset where the number of songs is only a cap', () => {
+      expect(catalog.presets['last-standing']).toMatchObject({
+        eliminationCount: 1,
+        songCount: 50,
+      });
+      expect(catalog.limits.eliminationCount).toEqual({ min: 1, max: 25 });
+    });
+
+    it('eliminates the slowest after the reveal, shuts them out and waits only for who is left', async () => {
+      const { host, alice, bob, chloe, right, send } = await startStanding();
+      await send(alice, right);
+      await send(bob, right);
+      await send(chloe, right);
+      const reveal = nextEvent(alice, 'song:revealed');
+      await host.emitWithAck('song:reveal');
+      expect((await reveal).elimination).toMatchObject({
+        remaining: [{ name: 'Alice' }, { name: 'Bob' }],
+        eliminated: [{ name: 'Chloé' }],
+        leftAfterCurrentSong: [{ name: 'Chloé' }],
+      });
+
+      const next = await host.emitWithAck('song:next');
+      if (!next.ok || next.data.kind !== 'song') throw new Error('expected a second song');
+      expect(await send(chloe, right)).toMatchObject({
+        ok: false,
+        error: { code: 'PLAYER_ELIMINATED' },
+      });
+
+      // The eliminated player is not waited for: the two survivors are enough to auto-reveal.
+      const allAnswered = nextEvent(host, 'song:all-answered');
+      const answer = `${next.data.song.title} ${next.data.song.artist}`;
+      await send(alice, answer);
+      await send(bob, answer);
+      expect(await allAnswered).toEqual({ songId: next.data.song.id });
+    }, 10_000);
+
+    it('tells everybody when a correction changes who is out, and finishes with one player left', async () => {
+      const { party, host, alice, bob, chloe, right, send } = await startStanding();
+      await send(alice, right);
+      await send(bob, right);
+      await send(chloe, right);
+      await host.emitWithAck('song:reveal');
+
+      const attached = await host.emitWithAck('host:attach', {
+        gameId: party.gameId,
+        hostToken: party.hostToken,
+      });
+      if (!attached.ok) throw new Error(attached.error.message);
+      expect(attached.data.elimination?.remaining).toHaveLength(2);
+      const bobsAnswer = attached.data.answers.find((a) => a.playerName === 'Bob');
+
+      // Bob's answer was actually wrong: he is out, and so is the slowest finder left, Chloé.
+      const updated = nextEvent(alice, 'elimination:updated');
+      await host.emitWithAck('answer:judge', {
+        answerId: bobsAnswer?.id ?? '',
+        title: false,
+        artist: false,
+        source: false,
+      });
+      expect(await updated).toMatchObject({
+        remaining: [{ name: 'Alice' }],
+        eliminated: [{ name: 'Bob' }, { name: 'Chloé' }],
+      });
+
+      // One player left: the only round is complete, so the next move ends the game.
+      expect(await host.emitWithAck('song:next')).toMatchObject({
+        ok: true,
+        data: { kind: 'finished' },
+      });
+    });
+  });
+
   it('rejects host actions from non-host sockets', async () => {
     const stranger = await openSocket();
     for (const event of ['song:next', 'song:reveal', 'game:finish'] as const) {

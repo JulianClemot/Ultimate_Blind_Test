@@ -8,6 +8,7 @@ export const ROUND_TYPES = [
   'fast-forward',
   'screen',
   'game',
+  'last-standing',
 ] as const;
 export type RoundType = (typeof ROUND_TYPES)[number];
 
@@ -33,6 +34,11 @@ export interface RoundRulesProps {
    */
   readonly rankStep: number;
   readonly songCount: number;
+  /**
+   * Last-standing rounds: how many of the slowest correct answerers leave after each song (the
+   * players who found nothing leave too). Ignored by the other rounds.
+   */
+  readonly eliminationCount: number;
   /** Points for finding the title (0 = title not asked). */
   readonly titlePoints: number;
   /** Points for finding the artist (0 = artist not asked). */
@@ -71,6 +77,7 @@ export const RULE_LIMITS: Readonly<Record<NumericRule, { min: number; max: numbe
   winnerCount: { min: 1, max: 50 },
   rankStep: { min: 0, max: 100 },
   songCount: { min: 1, max: 50 },
+  eliminationCount: { min: 1, max: 25 },
   titlePoints: { min: 0, max: 100 },
   artistPoints: { min: 0, max: 100 },
   sourcePoints: { min: 0, max: 100 },
@@ -86,6 +93,7 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
     winnerCount: 1,
     rankStep: 0,
     songCount: 10,
+    eliminationCount: 1,
     titlePoints: 1,
     artistPoints: 1,
     sourcePoints: 0,
@@ -102,6 +110,7 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
     winnerCount: 1,
     rankStep: 0,
     songCount: 10,
+    eliminationCount: 1,
     titlePoints: 2,
     artistPoints: 2,
     sourcePoints: 0,
@@ -118,6 +127,7 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
     winnerCount: 1,
     rankStep: 0,
     songCount: 10,
+    eliminationCount: 1,
     titlePoints: 2,
     artistPoints: 2,
     sourcePoints: 0,
@@ -134,6 +144,7 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
     winnerCount: 1,
     rankStep: 0,
     songCount: 10,
+    eliminationCount: 1,
     titlePoints: 2,
     artistPoints: 2,
     sourcePoints: 0,
@@ -150,6 +161,7 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
     winnerCount: 1,
     rankStep: 0,
     songCount: 10,
+    eliminationCount: 1,
     titlePoints: 0,
     artistPoints: 0,
     sourcePoints: 2,
@@ -166,6 +178,7 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
     winnerCount: 1,
     rankStep: 0,
     songCount: 10,
+    eliminationCount: 1,
     titlePoints: 0,
     artistPoints: 0,
     sourcePoints: 2,
@@ -173,6 +186,24 @@ export const ROUND_PRESETS: Readonly<Record<RoundType, RoundRulesProps>> = {
     speedBonus: 0,
     answerTimeSec: 30,
     excerptSec: 30,
+    playbackRate: 1,
+    teamMode: false,
+    easyMode: false,
+  },
+  // `songCount` is only a safety cap: the round ends when one player is left.
+  'last-standing': {
+    scoring: 'everyone',
+    winnerCount: 1,
+    rankStep: 0,
+    songCount: 50,
+    eliminationCount: 1,
+    titlePoints: 1,
+    artistPoints: 1,
+    sourcePoints: 0,
+    bothBonus: 0,
+    speedBonus: 0,
+    answerTimeSec: 20,
+    excerptSec: 20,
     playbackRate: 1,
     teamMode: false,
     easyMode: false,
@@ -187,6 +218,7 @@ export class RoundRules implements RoundRulesProps {
   readonly winnerCount: number;
   readonly rankStep: number;
   readonly songCount: number;
+  readonly eliminationCount: number;
   readonly titlePoints: number;
   readonly artistPoints: number;
   readonly sourcePoints: number;
@@ -203,6 +235,7 @@ export class RoundRules implements RoundRulesProps {
     this.winnerCount = props.winnerCount;
     this.rankStep = props.rankStep;
     this.songCount = props.songCount;
+    this.eliminationCount = props.eliminationCount;
     this.titlePoints = props.titlePoints;
     this.artistPoints = props.artistPoints;
     this.sourcePoints = props.sourcePoints;
@@ -278,6 +311,7 @@ export class RoundRules implements RoundRulesProps {
       winnerCount: this.winnerCount,
       rankStep: this.rankStep,
       songCount: this.songCount,
+      eliminationCount: this.eliminationCount,
       titlePoints: this.titlePoints,
       artistPoints: this.artistPoints,
       sourcePoints: this.sourcePoints,

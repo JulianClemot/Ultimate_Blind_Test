@@ -2,6 +2,7 @@ export * from './design/GameDesign';
 export * from './design/RoundPlan';
 export * from './design/RoundRules';
 export * from './game/Answer';
+export * from './game/elimination';
 export * from './game/Game';
 export * from './game/GameCode';
 export * from './game/GameErrors';

@@ -6,6 +6,7 @@ import { hostGameReducer, type HostGameState } from './hostGameState';
 
 const playing: HostGameState = snapshot({ status: 'playing', currentSong: hostSong() });
 const reveal = {
+  elimination: null,
   songId: 's1',
   title: 'One More Time',
   artist: 'Daft Punk',

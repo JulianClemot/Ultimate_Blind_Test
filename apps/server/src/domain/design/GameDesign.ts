@@ -33,11 +33,12 @@ export interface GameDesignSnapshot {
     readonly playlistTitle: string | null;
     /** Absent in designs saved before rounds could be about films and series. */
     readonly sourceOverrides?: Readonly<Record<string, string | null>>;
-    /** `winnerCount`, `rankStep`, `teamMode`, `easyMode` and `sourcePoints` are absent in designs saved before those rules existed. */
+    /** `winnerCount`, `rankStep`, `teamMode`, `easyMode`, `sourcePoints` and `eliminationCount` are absent in designs saved before those rules existed. */
     readonly rules: Omit<
       RoundRulesProps,
-      'winnerCount' | 'rankStep' | 'teamMode' | 'easyMode' | 'sourcePoints'
+      'winnerCount' | 'rankStep' | 'teamMode' | 'easyMode' | 'sourcePoints' | 'eliminationCount'
     > & {
+      readonly eliminationCount?: number;
       readonly winnerCount?: number;
       readonly rankStep?: number;
       readonly teamMode?: boolean;
@@ -91,6 +92,7 @@ export class GameDesign {
         teamMode: false,
         easyMode: false,
         sourcePoints: 0,
+        eliminationCount: 1,
         ...round.rules,
       });
       if (!playlist.ok || !rules.ok) throw new Error(`Corrupted design ${snapshot.id}`);

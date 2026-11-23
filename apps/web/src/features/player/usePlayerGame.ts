@@ -58,6 +58,9 @@ export const usePlayerGame = (session: PlayerSession) => {
   useSocketEvent('scoreboard:updated', (scoreboard) =>
     dispatch({ type: 'scoreboardUpdated', scoreboard }),
   );
+  useSocketEvent('elimination:updated', (elimination) =>
+    dispatch({ type: 'eliminationUpdated', elimination }),
+  );
   useSocketEvent('game:finished', (scoreboard) => dispatch({ type: 'gameFinished', scoreboard }));
   useSocketEvent('game:recap', (recap) => dispatch({ type: 'recapReceived', recap }));
 

@@ -21,6 +21,7 @@ const song = (overrides: Partial<HostSongDto> = {}): HostSongDto => ({
   revealed: false,
   asksSource: false,
   suggestions: [],
+  elimination: null,
   previewUrl: 'https://cdn.test/1.mp3',
   excerptSec: 30,
   playbackRate: 1,

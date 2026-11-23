@@ -130,6 +130,7 @@ describe('<SongPanel />', () => {
       <SongPanel
         song={hostSong({ revealed: true })}
         reveal={{
+          elimination: null,
           songId: 's1',
           title: 'One More Time',
           artist: 'Daft Punk',

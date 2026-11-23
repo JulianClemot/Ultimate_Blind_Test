@@ -1,5 +1,6 @@
 import type {
   AnswerDto,
+  EliminationDto,
   GameRecapDto,
   GameSnapshotDto,
   HostSongDto,
@@ -26,10 +27,20 @@ export type HostGameAction =
   | { type: 'allAnswered'; songId: string }
   | { type: 'songRevealed'; reveal: RevealDto }
   | { type: 'scoreboardUpdated'; scoreboard: readonly ScoreDto[] }
+  | { type: 'eliminationUpdated'; elimination: EliminationDto }
   | { type: 'gameFinished'; scoreboard: readonly ScoreDto[] }
   | { type: 'recapReceived'; recap: GameRecapDto };
 
 const byArrival = (a: AnswerDto, b: AnswerDto) => a.receivedAt - b.receivedAt;
+
+/**
+ * A last-standing round in the final round of the game is won once one player is left: nothing
+ * follows. (Elsewhere the next round simply starts.)
+ */
+const isWon = (state: GameSnapshotDto, { elimination }: Pick<RevealDto, 'elimination'>): boolean =>
+  elimination !== null &&
+  elimination.remaining.length <= 1 &&
+  elimination.roundNumber === state.rounds.length;
 
 const isLastSong = (state: GameSnapshotDto, song: HostSongDto) =>
   song.roundNumber === state.rounds.length && song.number === song.songCount;
@@ -71,6 +82,7 @@ export const hostGameReducer = (state: HostGameState, action: HostGameAction): H
             reveal: null,
             answers: [],
             everyoneAnswered: false,
+            elimination: action.song.elimination,
             hasNextSong: !isLastSong(state, action.song),
           };
     case 'answerReceived':
@@ -93,6 +105,14 @@ export const hostGameReducer = (state: HostGameState, action: HostGameAction): H
         reveal: action.reveal,
         scoreboard: action.reveal.scoreboard,
         teamScoreboard: action.reveal.teamScoreboard,
+        elimination: action.reveal.elimination,
+        hasNextSong: state.hasNextSong && !isWon(state, action.reveal),
+      };
+    case 'eliminationUpdated':
+      return {
+        ...state,
+        elimination: action.elimination,
+        hasNextSong: !isWon(state, { elimination: action.elimination }),
       };
     case 'scoreboardUpdated':
       return {

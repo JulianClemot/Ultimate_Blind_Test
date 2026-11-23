@@ -88,6 +88,7 @@ describe('<PlayerGamePage />', () => {
           revealed: false,
           asksSource: false,
           suggestions: [],
+          elimination: null,
         },
       }),
     );
@@ -111,6 +112,7 @@ describe('<PlayerGamePage />', () => {
       revealed: false,
       asksSource: false,
       suggestions: [],
+      elimination: null,
     };
     const sent = answer({ songId: 's1' });
 
@@ -282,6 +284,7 @@ describe('<PlayerGamePage /> in a round about films and series', () => {
     asksSource: true,
     revealed: false,
     suggestions: [],
+    elimination: null,
   };
 
   beforeEach(() => {
@@ -302,6 +305,7 @@ describe('<PlayerGamePage /> in a round about films and series', () => {
         status: 'playing',
         currentSong: { ...song, revealed: true },
         reveal: {
+          elimination: null,
           songId: 's1',
           title: 'Let It Go',
           artist: 'Idina Menzel',
