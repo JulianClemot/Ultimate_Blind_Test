@@ -25,9 +25,19 @@ type ClientSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 type Payload<E extends keyof ServerToClientEvents> = Parameters<ServerToClientEvents[E]>[0];
 
 /** Resolves with the next payload of `event` (socket.io's overloads can't be narrowed generically). */
-const nextEvent = <E extends keyof ServerToClientEvents>(socket: ClientSocket, event: E) =>
+const nextEvent = <E extends keyof ServerToClientEvents>(
+  socket: ClientSocket,
+  event: E,
+  /** Skips earlier broadcasts still in flight (e.g. from a previous action). */
+  accept: (payload: Payload<E>) => boolean = () => true,
+) =>
   new Promise<Payload<E>>((resolve) => {
-    (socket as unknown as { once(e: E, l: (p: Payload<E>) => void): void }).once(event, resolve);
+    const listener = (payload: Payload<E>) => {
+      if (!accept(payload)) return;
+      (socket as unknown as { off(e: E, l: typeof listener): void }).off(event, listener);
+      resolve(payload);
+    };
+    (socket as unknown as { on(e: E, l: typeof listener): void }).on(event, listener);
   });
 
 const preview = (id: number) => `https://cdnt-preview.dzcdn.net/api/1/${id}.mp3?hdnea=exp=1`;
@@ -817,7 +827,9 @@ describe('blind test (HTTP + Socket.IO)', () => {
       const [first, second] = generated.data;
       if (!first || !second) throw new Error('expected two teams');
 
-      const renamedForAlice = nextEvent(alice.socket, 'teams:updated');
+      const renamedForAlice = nextEvent(alice.socket, 'teams:updated', (teams) =>
+        teams.some((team) => team.id === first.id && team.name === 'Les Rois'),
+      );
       const renamed = await host.emitWithAck('teams:rename', {
         teamId: first.id,
         name: '  Les   Rois ',
