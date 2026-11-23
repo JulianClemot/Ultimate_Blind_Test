@@ -61,11 +61,21 @@ jobs:
           aws-region: eu-west-3
           application-name: ubt-app
           environment-name: ubt-app
-          create-environment-if-not-exists: 'false'
-          create-application-if-not-exists: 'false'
+          create-environment-if-not-exists: 'true'
+          create-application-if-not-exists: 'true'
           source-directory: bundle
           option-settings: |
             [
-              { "Namespace": "aws:elasticbeanstalk:application:envi
-                "OptionName": "IMAGE_TAG", "Value": "${{ github.sha }}" }
+              { "Namespace": "aws:elasticbeanstalk:application:environment
+                "OptionName": "IMAGE_TAG",
+                "Value": "latest"
+              },
+              { "Namespace": "aws:elasticbeanstalk:application:environment
+                "OptionName": "ECR_REGISTRY",
+                "Value": "448878779811.dkr.ecr.eu-west-3.amazonaws.com"
+              },
+              { "Namespace": "aws:elasticbeanstalk:application:environment
+                "OptionName": "WEB_PORT",
+                "Value": "80"
+              }
             ]
