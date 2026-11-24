@@ -66,15 +66,15 @@ jobs:
           source-directory: bundle
           option-settings: |
             [
-              { "Namespace": "aws:elasticbeanstalk:application:environment
+              { "Namespace": "aws:elasticbeanstalk:application:environment",
                 "OptionName": "IMAGE_TAG",
-                "Value": "latest"
+                "Value": "${{ github.sha }}"
               },
-              { "Namespace": "aws:elasticbeanstalk:application:environment
+              { "Namespace": "aws:elasticbeanstalk:application:environment",
                 "OptionName": "ECR_REGISTRY",
                 "Value": "448878779811.dkr.ecr.eu-west-3.amazonaws.com"
               },
-              { "Namespace": "aws:elasticbeanstalk:application:environment
+              { "Namespace": "aws:elasticbeanstalk:application:environment",
                 "OptionName": "WEB_PORT",
                 "Value": "80"
               }
